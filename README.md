@@ -106,116 +106,97 @@ public class GuessNumberApp {
 import java.util.Scanner;
 
 public class TicTacToe {
-    private char[][] board = new char[3][3];
-    private char currentMark = 'X';
+    private char[][] board;
+    private int rowNumber;
+    private int columnNumber;
+    private char markSelected;
+    private boolean gameOver;
 
+    // Constructor
     public TicTacToe() {
-        resetBoard();
+        board = new char[3][3];
+        initializeBoard();
+        markSelected = 'X';
+        gameOver = false;
     }
 
+    // Initialize the board with empty spaces
+    private void initializeBoard() {
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                board[i][j] = ' ';
+            }
+        }
+    }
+
+    // Display welcome message
     public void displayWelcomeMessage() {
         System.out.println("Welcome to Tic Tac Toe!");
-        System.out.println("Player X goes first.");
     }
 
+    // Display the current game grid
     public void displayGrid() {
-        System.out.println("-------------");
+        System.out.println("+---+---+---+");
         for (int i = 0; i < 3; i++) {
             System.out.print("| ");
             for (int j = 0; j < 3; j++) {
                 System.out.print(board[i][j] + " | ");
             }
             System.out.println();
-            System.out.println("-------------");
+            System.out.println("+---+---+---+");
         }
     }
 
+    // Start the game loop
     public void startGame() {
         Scanner input = new Scanner(System.in);
-        boolean playAgain = true;
+        displayGrid();
 
-        while (playAgain) {
-            resetBoard();
-            currentMark = 'X';
-            boolean gameRunning = true;
-
-            while (gameRunning) {
-                displayGrid();
-                takeTurn(input);
-
-                if (checkForWinner()) {
-                    displayGrid();
-                    System.out.println("🎉 Player " + currentMark + " wins!");
-                    break;
-                }
-
-                if (isBoardFull()) {
-                    displayGrid();
-                    System.out.println("🤝 It's a tie!");
-                    break;
-                }
-
+        while (!gameOver) {
+            takeTurn(input);
+            displayGrid();
+            if (checkForWinner()) {
+                System.out.println("Player " + markSelected + " wins!");
+                gameOver = true;
+            } else if (isBoardFull()) {
+                System.out.println("It's a draw!");
+                gameOver = true;
+            } else {
                 switchPlayer();
             }
-
-            // Ask if they want to play again
-            System.out.print("Would you like to play again? (Y/N): ");
-            String answer = input.next().trim().toUpperCase();
-            if (!answer.equals("Y")) {
-                playAgain = false;
-                System.out.println("Thanks for playing Tic Tac Toe!");
-            }
         }
+        input.close();
     }
 
+    // Take a player's turn
     public void takeTurn(Scanner input) {
-        int row, col;
-        while (true) {
-            System.out.println("Player " + currentMark + ", enter your move (row and column: 0, 1, or 2): ");
-            System.out.print("Row: ");
-            row = input.nextInt();
-            System.out.print("Column: ");
-            col = input.nextInt();
+        boolean validMove = false;
 
-            if (row >= 0 && row < 3 && col >= 0 && col < 3) {
-                if (board[row][col] == ' ') {
-                    board[row][col] = currentMark;
-                    break;
-                } else {
-                    System.out.println("That spot is already taken. Try again.");
-                }
+        while (!validMove) {
+            System.out.println("Player " + markSelected + "'s turn");
+            System.out.print("Pick a row (1, 2, 3): ");
+            rowNumber = input.nextInt() - 1;
+
+            System.out.print("Pick a column (1, 2, 3): ");
+            columnNumber = input.nextInt() - 1;
+
+            if (rowNumber < 0 || rowNumber >= 3 || columnNumber < 0 || columnNumber >= 3) {
+                System.out.println("Invalid position. Try again.");
+            } else if (board[rowNumber][columnNumber] != ' ') {
+                System.out.println("That spot is already taken. Try again.");
             } else {
-                System.out.println("Invalid input. Please enter values between 0 and 2.");
+                board[rowNumber][columnNumber] = markSelected;
+                validMove = true;
             }
         }
     }
 
-    public boolean checkForWinner() {
-        // Check rows
-        for (int i = 0; i < 3; i++) {
-            if (board[i][0] != ' ' && board[i][0] == board[i][1] && board[i][1] == board[i][2]) {
-                return true;
-            }
-        }
-
-        // Check columns
-        for (int j = 0; j < 3; j++) {
-            if (board[0][j] != ' ' && board[0][j] == board[1][j] && board[1][j] == board[2][j]) {
-                return true;
-            }
-        }
-
-        // Check diagonals
-        if (board[0][0] != ' ' && board[0][0] == board[1][1] && board[1][1] == board[2][2]) {
-            return true;
-        }
-        if (board[0][2] != ' ' && board[0][2] == board[1][1] && board[1][1] == board[2][0]) {
-            return true;
-        }
-
-        return false;
+    // Switch between players
+    private void switchPlayer() {
+        markSelected = (markSelected == 'X') ? 'O' : 'X';
     }
 
+    // Check if the board is full
     private boolean isBoardFull() {
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
@@ -227,18 +208,26 @@ public class TicTacToe {
         return true;
     }
 
-    private void switchPlayer() {
-        currentMark = (currentMark == 'X') ? 'O' : 'X';
-    }
-
-    private void resetBoard() {
+    // Check for a winner
+    public boolean checkForWinner() {
+        // Check rows and columns
         for (int i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++) {
-                board[i][j] = ' ';
+            if ((board[i][0] == markSelected && board[i][1] == markSelected && board[i][2] == markSelected) ||
+                (board[0][i] == markSelected && board[1][i] == markSelected && board[2][i] == markSelected)) {
+                return true;
             }
         }
+
+        // Check diagonals
+        if ((board[0][0] == markSelected && board[1][1] == markSelected && board[2][2] == markSelected) ||
+            (board[0][2] == markSelected && board[1][1] == markSelected && board[2][0] == markSelected)) {
+            return true;
+        }
+
+        return false;
     }
 }
+
 
 ---- app
 public class TicTacToeApp {
