@@ -242,5 +242,103 @@ public class BankAcctApp {
     }
 }
 
+---------------------------- countrylist.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Scanner;
+
+public class CountriesList {
+    // Data
+    private ArrayList<String> countries = new ArrayList<>();
+    private int menuOption;
+
+    // Methods
+    public void displayWelcomeMessage() {
+        System.out.println("Country List Manager\n");
+    }
+
+    public void displayMenu() {
+        System.out.println("COMMAND MENU");
+        System.out.println("1 - List countries");
+        System.out.println("2 - Add a country");
+        System.out.println("3 - Exit");
+    }
+
+    public int getMenuOption(Scanner sc) {
+        System.out.print("\nEnter menu number: ");
+        menuOption = sc.nextInt();
+        sc.nextLine(); // clear input buffer
+        return menuOption;
+    }
+
+    public boolean checkForCountry(String country) {
+        for (String c : countries) {
+            if (c.equalsIgnoreCase(country)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void addCountry(Scanner sc) {
+        System.out.print("Enter country: ");
+        String country = sc.nextLine().trim();
+
+        if (checkForCountry(country)) {
+            System.out.println("Country " + country + " already exists in list");
+        } else {
+            countries.add(country);
+            System.out.println("Country " + country + " has been added.");
+        }
+    }
+
+    public void listCountries() {
+        if (countries.isEmpty()) {
+            System.out.println("No countries in the list.");
+        } else {
+            Collections.sort(countries);
+            for (String c : countries) {
+                System.out.println(c);
+            }
+        }
     }
 }
+------------------------countries list app
+import java.util.Scanner;
+
+public class CountriesListApp {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        CountriesList cl = new CountriesList();
+
+        cl.displayWelcomeMessage();
+
+        int choice;
+        do {
+            cl.displayMenu();
+            choice = cl.getMenuOption(sc);
+
+            switch (choice) {
+                case 1:
+                    cl.listCountries();
+                    break;
+                case 2:
+                    cl.addCountry(sc);
+                    break;
+                case 3:
+                    System.out.println("Goodbye.");
+                    break;
+                default:
+                    System.out.println("Invalid option. Please choose 1, 2, or 3.");
+                    break;
+            }
+        } while (choice != 3);
+
+        sc.close();
+    }
+}
+
+
+
+
+
