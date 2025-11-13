@@ -193,7 +193,6 @@ public class DataEntry {
 }
 
 -------------
-
 import java.util.ArrayList;
 
 public class BankAcctApp {
@@ -203,42 +202,259 @@ public class BankAcctApp {
         ArrayList<Customer> customers = new ArrayList<>();
         boolean addMore = true;
 
-        System.out.println("Welcome to the Banking Application - Phase 1");
+        System.out.println("Welcome to the Banking Application - Phase 2");
         System.out.println("--------------------------------------------");
 
         while (addMore) {
             Customer c = new Customer();
+            Account a = new Account();
 
             System.out.println("\nEnter new customer information:");
 
-            c.setCustomerID(DataEntry.getLimitedString("Customer ID (max 5): ", 5));
-            c.setSsn(DataEntry.getNumericString("Customer SSN (9 digits): ", 9));
-            c.setLastName(DataEntry.getLimitedString("Last Name (max 20): ", 20));
-            c.setFirstName(DataEntry.getLimitedString("First Name (max 15): ", 15));
-            c.setStreet(DataEntry.getLimitedString("Street (max 20): ", 20));
-            c.setCity(DataEntry.getLimitedString("City (max 20): ", 20));
-            c.setState(DataEntry.getLimitedString("State (2 letters): ", 2));
-            c.setZip(DataEntry.getNumericString("Zip Code (5 digits): ", 5));
-            c.setPhone(DataEntry.getNumericString("Phone (10 digits): ", 10));
+            // --- CUSTOMER INPUT WITH TRY/CATCH VALIDATION ---
+            while (true) {
+                try {
+                    c.setCustomerID(DataEntry.getLimitedString("Customer ID (max 5): ", 5));
+                    break;
+                } catch (Exception e) {
+                    System.out.println("Error: " + e.getMessage());
+                }
+            }
+
+            while (true) {
+                try {
+                    c.setSsn(DataEntry.getNumericString("Customer SSN (9 digits): ", 9));
+                    break;
+                } catch (Exception e) {
+                    System.out.println("Error: " + e.getMessage());
+                }
+            }
+
+            while (true) {
+                try {
+                    c.setLastName(DataEntry.getLimitedString("Last Name (max 20): ", 20));
+                    break;
+                } catch (Exception e) {
+                    System.out.println("Error: " + e.getMessage());
+                }
+            }
+
+            while (true) {
+                try {
+                    c.setFirstName(DataEntry.getLimitedString("First Name (max 15): ", 15));
+                    break;
+                } catch (Exception e) {
+                    System.out.println("Error: " + e.getMessage());
+                }
+            }
+
+            while (true) {
+                try {
+                    c.setStreet(DataEntry.getLimitedString("Street (max 20): ", 20));
+                    break;
+                } catch (Exception e) {
+                    System.out.println("Error: " + e.getMessage());
+                }
+            }
+
+            while (true) {
+                try {
+                    c.setCity(DataEntry.getLimitedString("City (max 20): ", 20));
+                    break;
+                } catch (Exception e) {
+                    System.out.println("Error: " + e.getMessage());
+                }
+            }
+
+            while (true) {
+                try {
+                    c.setState(DataEntry.getLimitedString("State (2 letters): ", 2));
+                    break;
+                } catch (Exception e) {
+                    System.out.println("Error: " + e.getMessage());
+                }
+            }
+
+            while (true) {
+                try {
+                    c.setZip(DataEntry.getNumericString("Zip Code (5 digits): ", 5));
+                    break;
+                } catch (Exception e) {
+                    System.out.println("Error: " + e.getMessage());
+                }
+            }
+
+            while (true) {
+                try {
+                    c.setPhone(DataEntry.getNumericString("Phone (10 digits): ", 10));
+                    break;
+                } catch (Exception e) {
+                    System.out.println("Error: " + e.getMessage());
+                }
+            }
+
+            // --- ACCOUNT INPUT WITH TRY/CATCH VALIDATION ---
+            System.out.println("\nEnter account information:");
+            while (true) {
+                try {
+                    a.setAccountNumber(DataEntry.getLimitedString("Account Number (max 5): ", 5));
+                    break;
+                } catch (Exception e) {
+                    System.out.println("Error: " + e.getMessage());
+                }
+            }
+
+            while (true) {
+                try {
+                    a.setAccountType(DataEntry.getLimitedString("Account Type (CHK or SAV): ", 3));
+                    break;
+                } catch (Exception e) {
+                    System.out.println("Error: " + e.getMessage());
+                }
+            }
+
+            while (true) {
+                try {
+                    a.setServiceFee(DataEntry.getDoubleInRange("Service Fee (0–10): ", 0, 10));
+                    break;
+                } catch (Exception e) {
+                    System.out.println("Error: " + e.getMessage());
+                }
+            }
+
+            while (true) {
+                try {
+                    a.setInterestRate(DataEntry.getDoubleInRange("Interest Rate (0–10): ", 0, 10));
+                    break;
+                } catch (Exception e) {
+                    System.out.println("Error: " + e.getMessage());
+                }
+            }
+
+            while (true) {
+                try {
+                    a.setOverdrawFee(DataEntry.getDouble("Overdraw Fee: "));
+                    if (a.getOverdrawFee() < 0) throw new IllegalArgumentException("Fee cannot be negative.");
+                    break;
+                } catch (Exception e) {
+                    System.out.println("Error: " + e.getMessage());
+                }
+            }
 
             customers.add(c);
 
-            String another = DataEntry.getString("Add another customer? (Y/N): ");
+            // Display confirmation
+            System.out.println("\nCustomer and Account added successfully!");
+            System.out.println("--------------------------------------------");
+            System.out.println(c);
+            System.out.println(a);
+
+            String another = DataEntry.getString("\nAdd another customer? (Y/N): ");
             addMore = another.equalsIgnoreCase("Y");
         }
 
-        // Display all customers
-        System.out.println("\nAll Customer Information:");
-        System.out.println("--------------------------------------------------------------");
+        // --- DISPLAY ALL ---
+        System.out.println("\nAll Customer and Account Information:");
+        System.out.println("--------------------------------------------------------------------------------------------");
         System.out.printf("%-8s %-10s %-15s %-15s %-20s %-15s %-5s %-5s %-10s%n",
                 "CustID", "SSN", "LastName", "FirstName", "Street", "City", "State", "Zip", "Phone");
-        System.out.println("--------------------------------------------------------------");
+        System.out.println("--------------------------------------------------------------------------------------------");
 
         for (Customer c : customers) {
             System.out.println(c);
         }
 
+        System.out.println("\nAccount Details:");
+        System.out.printf("%-8s %-5s %-10s %-12s %-12s %-12s%n",
+                "Acct#", "Type", "SvcFee", "IntRate(%)", "Overdraw", "Balance");
+        System.out.println("--------------------------------------------------------------");
+        // Eventually this will print from Checking/Savings subclass objects in Phase 3
+
         System.out.println("\nThank you for using the Banking Application!");
+    }
+}
+
+------------------------------- account.java
+
+public class Account {
+    // Instance variables
+    private String accountNumber;
+    private String accountType; // "CHK" or "SAV"
+    private double serviceFee;  // 0.00–10.00
+    private double interestRate; // 0–10 percent
+    private double overdrawFee;
+    private double balance; // starts at 0.0
+
+    // Constructor
+    public Account() {
+        this.balance = 0.0;
+    }
+
+    // Getters and Setters
+    public String getAccountNumber() {
+        return accountNumber;
+    }
+
+    public void setAccountNumber(String accountNumber) {
+        this.accountNumber = accountNumber;
+    }
+
+    public String getAccountType() {
+        return accountType;
+    }
+
+    public void setAccountType(String accountType) {
+        if (!accountType.equalsIgnoreCase("CHK") && !accountType.equalsIgnoreCase("SAV")) {
+            throw new IllegalArgumentException("Account type must be CHK or SAV.");
+        }
+        this.accountType = accountType.toUpperCase();
+    }
+
+    public double getServiceFee() {
+        return serviceFee;
+    }
+
+    public void setServiceFee(double serviceFee) {
+        if (serviceFee < 0 || serviceFee > 10.00) {
+            throw new IllegalArgumentException("Service fee must be between 0 and 10.00.");
+        }
+        this.serviceFee = serviceFee;
+    }
+
+    public double getInterestRate() {
+        return interestRate;
+    }
+
+    public void setInterestRate(double interestRate) {
+        if (interestRate < 0 || interestRate > 10) {
+            throw new IllegalArgumentException("Interest rate must be between 0 and 10 percent.");
+        }
+        this.interestRate = interestRate;
+    }
+
+    public double getOverdrawFee() {
+        return overdrawFee;
+    }
+
+    public void setOverdrawFee(double overdrawFee) {
+        if (overdrawFee < 0) {
+            throw new IllegalArgumentException("Overdraw fee cannot be negative.");
+        }
+        this.overdrawFee = overdrawFee;
+    }
+
+    public double getBalance() {
+        return balance;
+    }
+
+    public void setBalance(double balance) {
+        this.balance = balance;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("%-8s %-5s $%-8.2f %-8.2f%% $%-8.2f $%-8.2f",
+                accountNumber, accountType, serviceFee, interestRate, overdrawFee, balance);
     }
 }
 
