@@ -1,3 +1,189 @@
+-----StackCalculator.java----
+import java.util.Stack;
+
+public class StackCalculator {
+
+    // Data
+    private Stack<Double> calculator = new Stack<>();
+    private String command;
+
+    // Display welcome message
+    public void displayWelcomeMessage() {
+        System.out.println("Welcome to the Stack Calculator.\n");
+    }
+
+    // Display list of commands
+    public void displayCommands() {
+        System.out.println("Commands: push n, add, sub, mult, div, list, clear, or quit.\n");
+    }
+
+    // Push a value onto the stack
+    public void push(double value) {
+        calculator.push(value);
+    }
+
+    // Pop a value, with error check
+    public Double pop() {
+        if (calculator.empty()) {
+            System.out.println("Error: Stack is empty.");
+            return null;
+        }
+        return calculator.pop();
+    }
+
+    // Return stack size
+    public int size() {
+        return calculator.size();
+    }
+
+    // Get values for printing
+    public void listStack() {
+        if (calculator.empty()) {
+            System.out.println("empty");
+            return;
+        }
+
+        for (Double value : calculator) {
+            System.out.println(value);
+        }
+    }
+
+    // Clear the stack
+    public void clearStack() {
+        calculator.clear();
+    }
+
+    // ADD – pop two numbers, add them, push result
+    public void add() {
+        if (calculator.size() < 2) {
+            System.out.println("Error: Need at least two values to add.");
+            return;
+        }
+        double a = calculator.pop();
+        double b = calculator.pop();
+        double result = a + b;
+        calculator.push(result);
+        System.out.println(result);
+    }
+
+    // SUB – pop two numbers: second - first
+    public void sub() {
+        if (calculator.size() < 2) {
+            System.out.println("Error: Need at least two values to subtract.");
+            return;
+        }
+        double a = calculator.pop();
+        double b = calculator.pop();
+        double result = b - a;
+        calculator.push(result);
+        System.out.println(result);
+    }
+
+    // MULT – multiply two values
+    public void mult() {
+        if (calculator.size() < 2) {
+            System.out.println("Error: Need at least two values to multiply.");
+            return;
+        }
+        double a = calculator.pop();
+        double b = calculator.pop();
+        double result = a * b;
+        calculator.push(result);
+        System.out.println(result);
+    }
+
+    // DIV – divide second value by first
+    public void div() {
+        if (calculator.size() < 2) {
+            System.out.println("Error: Need at least two values to divide.");
+            return;
+        }
+
+        double a = calculator.pop();
+        double b = calculator.pop();
+
+        if (a == 0) {
+            System.out.println("Error: Division by zero.");
+            // Push values back so state isn't lost
+            calculator.push(b);
+            calculator.push(a);
+            return;
+        }
+
+        double result = b / a;
+        calculator.push(result);
+        System.out.println(result);
+    }
+}
+--------StackCalculatorApp.java--------
+import java.util.Scanner;
+
+public class StackCalculatorApp {
+
+    public static void main(String[] args) {
+
+        StackCalculator calc = new StackCalculator();
+        Scanner sc = new Scanner(System.in);
+
+        calc.displayWelcomeMessage();
+        calc.displayCommands();
+
+        String input;
+
+        while (true) {
+            System.out.print("stack> ");
+            input = sc.nextLine().trim().toLowerCase();
+
+            if (input.startsWith("push")) {
+                try {
+                    String[] parts = input.split(" ");
+                    double value = Double.parseDouble(parts[1]);
+                    calc.push(value);
+                    System.out.println(value);
+                } catch (Exception e) {
+                    System.out.println("Error: Use format 'push n'");
+                }
+            }
+
+            else if (input.equals("add")) {
+                calc.add();
+            }
+
+            else if (input.equals("sub")) {
+                calc.sub();
+            }
+
+            else if (input.equals("mult")) {
+                calc.mult();
+            }
+
+            else if (input.equals("div")) {
+                calc.div();
+            }
+
+            else if (input.equals("list")) {
+                calc.listStack();
+            }
+
+            else if (input.equals("clear")) {
+                calc.clearStack();
+                System.out.println("empty");
+            }
+
+            else if (input.equals("quit")) {
+                System.out.println("Thanks for using The Stack Calculator.");
+                break;
+            }
+
+            else {
+                System.out.println("Unrecognized command.");
+            }
+        }
+
+        sc.close();
+    }
+}
+----------
 public class Customer {
 
     // Instance variables
