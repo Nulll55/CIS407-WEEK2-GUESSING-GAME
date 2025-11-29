@@ -481,6 +481,7 @@ public class BankAcctApp {
 
             // --- ACCOUNT INPUT WITH TRY/CATCH VALIDATION ---
             System.out.println("\nEnter account information:");
+
             while (true) {
                 try {
                     a.setAccountNumber(DataEntry.getLimitedString("Account Number (max 5): ", 5));
@@ -520,7 +521,8 @@ public class BankAcctApp {
             while (true) {
                 try {
                     a.setOverdrawFee(DataEntry.getDouble("Overdraw Fee: "));
-                    if (a.getOverdrawFee() < 0) throw new IllegalArgumentException("Fee cannot be negative.");
+                    if (a.getOverdrawFee() < 0)
+                        throw new IllegalArgumentException("Fee cannot be negative.");
                     break;
                 } catch (Exception e) {
                     System.out.println("Error: " + e.getMessage());
@@ -539,7 +541,7 @@ public class BankAcctApp {
             addMore = another.equalsIgnoreCase("Y");
         }
 
-        // --- DISPLAY ALL ---
+        // --- DISPLAY ALL CUSTOMERS ---
         System.out.println("\nAll Customer and Account Information:");
         System.out.println("--------------------------------------------------------------------------------------------");
         System.out.printf("%-8s %-10s %-15s %-15s %-20s %-15s %-5s %-5s %-10s%n",
@@ -550,11 +552,12 @@ public class BankAcctApp {
             System.out.println(c);
         }
 
+        // --- ACCOUNT DETAILS HEADER ---
         System.out.println("\nAccount Details:");
         System.out.printf("%-8s %-5s %-10s %-12s %-12s %-12s%n",
                 "Acct#", "Type", "SvcFee", "IntRate(%)", "Overdraw", "Balance");
         System.out.println("--------------------------------------------------------------");
-        // Eventually this will print from Checking/Savings subclass objects in Phase 3
+        // Will print Checking/Savings subclass objects in Phase 3
 
         System.out.println("\nThank you for using the Banking Application!");
     }
@@ -562,87 +565,168 @@ public class BankAcctApp {
 
 ------------------------------- account.java
 
-public class Account {
-    // Instance variables
-    private String accountNumber;
-    private String accountType; // "CHK" or "SAV"
-    private double serviceFee;  // 0.00–10.00
-    private double interestRate; // 0–10 percent
-    private double overdrawFee;
-    private double balance; // starts at 0.0
+public abstract class Account {
 
-    // Constructor
-    public Account() {
-        this.balance = 0.0;
+    protected String accountNumber;   // max 5
+    protected String accountType;     // CHK or SAV
+    protected double serviceFee;      // checking: .50, savings: .25
+    protected double interestRate;    // checking: 2%, savings: 5%
+    protected double overdrawFee;     // checking: 30.00, savings cannot overdraw
+    protected double balance = 0.0;
+
+    public String getAccountNumber() { return accountNumber; }
+    public void setAccountNumber(String accountNumber) { this.accountNumber = accountNumber; }
+
+    public String getAccountType() { return accountType; }
+    public void setAccountType(String accountType) { this.accountType = accountType; }
+
+    public double getServiceFee() { return serviceFee; }
+    public void setServiceFee(double serviceFee) { this.serviceFee = serviceFee; }
+
+    public double getInterestRate() { return interestRate; }
+    public void setInterestRate(double interestRate) { this.interestRate = interestRate; }
+
+    public double getOverdrawFee() { return overdrawFee; }
+    public void setOverdrawFee(double overdrawFee) { this.overdrawFee = overdrawFee; }
+
+    public double getBalance() { return balance; }
+
+    // ABSTRACT METHODS REQUIRED FOR SUBCLASSES
+    public abstract void withdrawal(double amount) throws Exception;
+    public abstract void deposit(double amount);
+    public abstract void balance();
+}
+
+
+---------AccountInterface.java---------
+public interface AccountInterface {
+    void withdrawal(double amount) throws Exception;
+    void deposit(double amount);
+    void balance();
+}
+
+---------checkingaccount.java----
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
+
+public class CheckingAccount extends Account implements AccountInterface {
+
+    private String transactionDate;
+    private String transactionType; // DEP or WTH
+    private double transactionAmount;
+
+    public CheckingAccount() {
+        this.serviceFee = 0.50;
+        this.interestRate = 2.0;
+        this.overdrawFee = 30.00;
+        this.accountType = "CHK";
     }
 
-    // Getters and Setters
-    public String getAccountNumber() {
-        return accountNumber;
-    }
-
-    public void setAccountNumber(String accountNumber) {
-        this.accountNumber = accountNumber;
-    }
-
-    public String getAccountType() {
-        return accountType;
-    }
-
-    public void setAccountType(String accountType) {
-        if (!accountType.equalsIgnoreCase("CHK") && !accountType.equalsIgnoreCase("SAV")) {
-            throw new IllegalArgumentException("Account type must be CHK or SAV.");
+    public void setTransactionDate(String date) throws Exception {
+        try {
+            LocalDate.parse(date);
+            this.transactionDate = date;
+        } catch (DateTimeParseException e) {
+            throw new Exception("Invalid date format. Use YYYY-MM-DD.");
         }
-        this.accountType = accountType.toUpperCase();
     }
 
-    public double getServiceFee() {
-        return serviceFee;
-    }
-
-    public void setServiceFee(double serviceFee) {
-        if (serviceFee < 0 || serviceFee > 10.00) {
-            throw new IllegalArgumentException("Service fee must be between 0 and 10.00.");
+    public void setTransactionType(String type) throws Exception {
+        if (!type.equalsIgnoreCase("DEP") && !type.equalsIgnoreCase("WTH")) {
+            throw new Exception("Transaction type must be DEP or WTH.");
         }
-        this.serviceFee = serviceFee;
+        this.transactionType = type.toUpperCase();
     }
 
-    public double getInterestRate() {
-        return interestRate;
-    }
-
-    public void setInterestRate(double interestRate) {
-        if (interestRate < 0 || interestRate > 10) {
-            throw new IllegalArgumentException("Interest rate must be between 0 and 10 percent.");
+    public void setTransactionAmount(double amt) throws Exception {
+        if (amt <= 0) {
+            throw new Exception("Amount must be greater than zero.");
         }
-        this.interestRate = interestRate;
-    }
-
-    public double getOverdrawFee() {
-        return overdrawFee;
-    }
-
-    public void setOverdrawFee(double overdrawFee) {
-        if (overdrawFee < 0) {
-            throw new IllegalArgumentException("Overdraw fee cannot be negative.");
-        }
-        this.overdrawFee = overdrawFee;
-    }
-
-    public double getBalance() {
-        return balance;
-    }
-
-    public void setBalance(double balance) {
-        this.balance = balance;
+        this.transactionAmount = amt;
     }
 
     @Override
-    public String toString() {
-        return String.format("%-8s %-5s $%-8.2f %-8.2f%% $%-8.2f $%-8.2f",
-                accountNumber, accountType, serviceFee, interestRate, overdrawFee, balance);
+    public void deposit(double amt) {
+        balance += amt;
+        balance -= serviceFee;
+    }
+
+    @Override
+    public void withdrawal(double amt) {
+        balance -= amt;
+        balance -= serviceFee;
+
+        if (balance < 0) {
+            balance -= overdrawFee;
+        }
+    }
+
+    @Override
+    public void balance() {
+        balance += (balance * (interestRate / 100));
     }
 }
+----------SavingsAccount.Java---
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
+
+public class SavingsAccount extends Account implements AccountInterface {
+
+    private String transactionDate;
+    private String transactionType;
+    private double transactionAmount;
+
+    public SavingsAccount() {
+        this.serviceFee = 0.25;
+        this.interestRate = 5.0;
+        this.overdrawFee = 0.00;
+        this.accountType = "SAV";
+    }
+
+    public void setTransactionDate(String date) throws Exception {
+        try {
+            LocalDate.parse(date);
+            this.transactionDate = date;
+        } catch (DateTimeParseException e) {
+            throw new Exception("Invalid date format. Use YYYY-MM-DD.");
+        }
+    }
+
+    public void setTransactionType(String type) throws Exception {
+        if (!type.equalsIgnoreCase("DEP") && !type.equalsIgnoreCase("WTH")) {
+            throw new Exception("Transaction type must be DEP or WTH.");
+        }
+        this.transactionType = type.toUpperCase();
+    }
+
+    public void setTransactionAmount(double amt) throws Exception {
+        if (amt <= 0) {
+            throw new Exception("Amount must be greater than zero.");
+        }
+        this.transactionAmount = amt;
+    }
+
+    @Override
+    public void deposit(double amt) {
+        balance += amt;
+        balance -= serviceFee;
+    }
+
+    @Override
+    public void withdrawal(double amt) throws Exception {
+        if (amt > balance) {
+            throw new Exception("Savings accounts cannot be overdrawn.");
+        }
+        balance -= amt;
+        balance -= serviceFee;
+    }
+
+    @Override
+    public void balance() {
+        balance += (balance * (interestRate / 100));
+    }
+}
+
 
 ---------------------------- countrylist.java
 import java.util.ArrayList;
