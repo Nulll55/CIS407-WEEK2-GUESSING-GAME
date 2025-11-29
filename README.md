@@ -386,18 +386,21 @@ public class BankAcctApp {
     public static void main(String[] args) {
 
         ArrayList<Customer> customers = new ArrayList<>();
+        ArrayList<Account> accounts = new ArrayList<>();
+
         boolean addMore = true;
 
-        System.out.println("Welcome to the Banking Application - Phase 2");
+        System.out.println("Welcome to the Banking Application - Phase 3");
         System.out.println("--------------------------------------------");
 
         while (addMore) {
             Customer c = new Customer();
-            Account a = new Account();
+            Account a = null;   // <-- IMPORTANT: start as null
 
             System.out.println("\nEnter new customer information:");
 
-            // --- CUSTOMER INPUT WITH TRY/CATCH VALIDATION ---
+            // ---------------- CUSTOMER INPUT VALIDATION -----------------
+
             while (true) {
                 try {
                     c.setCustomerID(DataEntry.getLimitedString("Customer ID (max 5): ", 5));
@@ -479,8 +482,31 @@ public class BankAcctApp {
                 }
             }
 
-            // --- ACCOUNT INPUT WITH TRY/CATCH VALIDATION ---
+            // ---------------- ACCOUNT SELECTION -----------------
             System.out.println("\nEnter account information:");
+
+            String acctType;
+            while (true) {
+                try {
+                    acctType = DataEntry.getLimitedString("Account Type (CHK or SAV): ", 3);
+                    if (!acctType.equalsIgnoreCase("CHK") && 
+                        !acctType.equalsIgnoreCase("SAV")) {
+                        throw new IllegalArgumentException("Account type must be CHK or SAV.");
+                    }
+                    break;
+                } catch (Exception e) {
+                    System.out.println("Error: " + e.getMessage());
+                }
+            }
+
+            // -------- CREATE CORRECT SUBCLASS INSTANCE --------
+            if (acctType.equalsIgnoreCase("CHK")) {
+                a = new CheckingAccount();
+            } else {
+                a = new SavingsAccount();
+            }
+
+            // --------------- SUBCLASS VARIABLE VALIDATION ----------------
 
             while (true) {
                 try {
@@ -493,36 +519,7 @@ public class BankAcctApp {
 
             while (true) {
                 try {
-                    a.setAccountType(DataEntry.getLimitedString("Account Type (CHK or SAV): ", 3));
-                    break;
-                } catch (Exception e) {
-                    System.out.println("Error: " + e.getMessage());
-                }
-            }
-
-            while (true) {
-                try {
-                    a.setServiceFee(DataEntry.getDoubleInRange("Service Fee (0–10): ", 0, 10));
-                    break;
-                } catch (Exception e) {
-                    System.out.println("Error: " + e.getMessage());
-                }
-            }
-
-            while (true) {
-                try {
-                    a.setInterestRate(DataEntry.getDoubleInRange("Interest Rate (0–10): ", 0, 10));
-                    break;
-                } catch (Exception e) {
-                    System.out.println("Error: " + e.getMessage());
-                }
-            }
-
-            while (true) {
-                try {
-                    a.setOverdrawFee(DataEntry.getDouble("Overdraw Fee: "));
-                    if (a.getOverdrawFee() < 0)
-                        throw new IllegalArgumentException("Fee cannot be negative.");
+                    a.setBalance(DataEntry.getDouble("Starting Balance: "));
                     break;
                 } catch (Exception e) {
                     System.out.println("Error: " + e.getMessage());
@@ -530,8 +527,9 @@ public class BankAcctApp {
             }
 
             customers.add(c);
+            accounts.add(a);
 
-            // Display confirmation
+            // ---------------- CONFIRM ----------------
             System.out.println("\nCustomer and Account added successfully!");
             System.out.println("--------------------------------------------");
             System.out.println(c);
@@ -541,8 +539,8 @@ public class BankAcctApp {
             addMore = another.equalsIgnoreCase("Y");
         }
 
-        // --- DISPLAY ALL CUSTOMERS ---
-        System.out.println("\nAll Customer and Account Information:");
+        // ---------------- DISPLAY ALL CUSTOMERS ----------------
+        System.out.println("\nAll Customer Information:");
         System.out.println("--------------------------------------------------------------------------------------------");
         System.out.printf("%-8s %-10s %-15s %-15s %-20s %-15s %-5s %-5s %-10s%n",
                 "CustID", "SSN", "LastName", "FirstName", "Street", "City", "State", "Zip", "Phone");
@@ -552,12 +550,19 @@ public class BankAcctApp {
             System.out.println(c);
         }
 
-        // --- ACCOUNT DETAILS HEADER ---
+        // ---------------- DISPLAY ALL ACCOUNTS ----------------
         System.out.println("\nAccount Details:");
-        System.out.printf("%-8s %-5s %-10s %-12s %-12s %-12s%n",
-                "Acct#", "Type", "SvcFee", "IntRate(%)", "Overdraw", "Balance");
+        System.out.printf("%-10s %-10s %-12s %-12s%n",
+                "Acct#", "Type", "Balance", "Class");
         System.out.println("--------------------------------------------------------------");
-        // Will print Checking/Savings subclass objects in Phase 3
+
+        for (Account a : accounts) {
+            System.out.printf("%-10s %-10s %-12.2f %-12s%n",
+                    a.getAccountNumber(),
+                    a instanceof CheckingAccount ? "CHK" : "SAV",
+                    a.getBalance(),
+                    a.getClass().getSimpleName());
+        }
 
         System.out.println("\nThank you for using the Banking Application!");
     }
