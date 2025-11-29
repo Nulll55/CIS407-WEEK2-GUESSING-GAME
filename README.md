@@ -72,11 +72,9 @@ public class BankAcctApp {
 
         while (addMore) {
             Customer c = new Customer();
-            Account a = null;   // <-- IMPORTANT: start as null
+            Account a = null;
 
             System.out.println("\nEnter new customer information:");
-
-            // ---------------- CUSTOMER INPUT VALIDATION -----------------
 
             while (true) {
                 try {
@@ -159,9 +157,7 @@ public class BankAcctApp {
                 }
             }
 
-            // ---------------- ACCOUNT SELECTION -----------------
-            System.out.println("\nEnter account information:");
-
+            // ---------------- ACCOUNT TYPE ----------------
             String acctType;
             while (true) {
                 try {
@@ -176,14 +172,23 @@ public class BankAcctApp {
                 }
             }
 
-            // -------- CREATE CORRECT SUBCLASS INSTANCE --------
-            if (acctType.equalsIgnoreCase("CHK")) {
-                a = new CheckingAccount();
-            } else {
-                a = new SavingsAccount();
+            // ------------ STARTING BALANCE ----------------
+            double startBalance;
+            while (true) {
+                try {
+                    startBalance = DataEntry.getDouble("Starting Balance: ");
+                    break;
+                } catch (Exception e) {
+                    System.out.println("Error: " + e.getMessage());
+                }
             }
 
-            // --------------- SUBCLASS VARIABLE VALIDATION ----------------
+            // -------- CREATE CORRECT ACCOUNT CLASS --------
+            if (acctType.equalsIgnoreCase("CHK")) {
+                a = new CheckingAccount(startBalance);
+            } else {
+                a = new SavingsAccount(startBalance);
+            }
 
             while (true) {
                 try {
@@ -194,19 +199,9 @@ public class BankAcctApp {
                 }
             }
 
-            while (true) {
-                try {
-                    a.setBalance(DataEntry.getDouble("Starting Balance: "));
-                    break;
-                } catch (Exception e) {
-                    System.out.println("Error: " + e.getMessage());
-                }
-            }
-
             customers.add(c);
             accounts.add(a);
 
-            // ---------------- CONFIRM ----------------
             System.out.println("\nCustomer and Account added successfully!");
             System.out.println("--------------------------------------------");
             System.out.println(c);
@@ -216,7 +211,7 @@ public class BankAcctApp {
             addMore = another.equalsIgnoreCase("Y");
         }
 
-        // ---------------- DISPLAY ALL CUSTOMERS ----------------
+        // ---------------- DISPLAY ----------------
         System.out.println("\nAll Customer Information:");
         System.out.println("--------------------------------------------------------------------------------------------");
         System.out.printf("%-8s %-10s %-15s %-15s %-20s %-15s %-5s %-5s %-10s%n",
@@ -227,7 +222,6 @@ public class BankAcctApp {
             System.out.println(c);
         }
 
-        // ---------------- DISPLAY ALL ACCOUNTS ----------------
         System.out.println("\nAccount Details:");
         System.out.printf("%-10s %-10s %-12s %-12s%n",
                 "Acct#", "Type", "Balance", "Class");
@@ -247,41 +241,39 @@ public class BankAcctApp {
 
 ------------------------------- account.java
 
-public abstract class Account implements AccountInterface {
+package courseProject;
 
-    protected String accountNumber;
+public abstract class Account {
+
     protected double balance;
+    protected String accountNumber;
+
+    public Account(double balance) {
+        this.balance = balance;
+    }
 
     public String getAccountNumber() {
         return accountNumber;
     }
 
-    public void setAccountNumber(String accountNumber) {
-        if (accountNumber == null || accountNumber.isEmpty()) {
-            throw new IllegalArgumentException("Account number cannot be empty.");
-        }
-        this.accountNumber = accountNumber;
+    public void setAccountNumber(String num) {
+        this.accountNumber = num;
+    }
+
+    public void setBalance(double bal) {
+        this.balance = bal;
     }
 
     public double getBalance() {
         return balance;
     }
 
-    public void setBalance(double balance) {
-        if (balance < 0) throw new IllegalArgumentException("Balance cannot be negative.");
-        this.balance = balance;
-    }
+    public abstract void deposit(double amount, String date);
 
-    @Override
-    public double balance() {
-        return balance;
-    }
-
-    @Override
-    public String toString() {
-        return "Account Number: " + accountNumber + " | Balance: " + balance;
-    }
+    public abstract void withdrawal(double amount, String date);
 }
+
+
 
 ---------AccountInterface.java---------
 public interface AccountInterface {
@@ -291,11 +283,17 @@ public interface AccountInterface {
 }
 
 ---------checkingaccount.java----
+package courseProject;
+
 public class CheckingAccount extends Account {
 
     private final double SERVICE_FEE = 0.50;
     private final double OVERDRAFT_FEE = 30.00;
     private final double INTEREST_RATE = 0.02;
+
+    public CheckingAccount(double balance) {
+        super(balance);
+    }
 
     @Override
     public void deposit(double amount, String date) {
@@ -331,19 +329,27 @@ public class CheckingAccount extends Account {
     public void applyInterest() {
         double interest = balance * INTEREST_RATE;
         balance += interest;
-        System.out.println("CHK Interest Applied: +" + interest + " | New Balance: " + balance);
+        System.out.println("CHK Interest Applied: +" + interest +
+                " | New Balance: " + balance);
     }
 }
+
 ----------SavingsAccount.Java---
+package courseProject;
+
 public class SavingsAccount extends Account {
 
     private final double SERVICE_FEE = 0.25;
     private final double INTEREST_RATE = 0.05;
 
+    public SavingsAccount(double balance) {
+        super(balance);
+    }
+
     @Override
     public void deposit(double amount, String date) {
         if (amount <= 0) throw new IllegalArgumentException("Deposit must be positive.");
-        
+
         balance += amount;
         balance -= SERVICE_FEE;
 
@@ -374,7 +380,9 @@ public class SavingsAccount extends Account {
     public void applyInterest() {
         double interest = balance * INTEREST_RATE;
         balance += interest;
-        System.out.println("SAV Interest Applied: +" + interest + " | New Balance: " + balance);
+
+        System.out.println("SAV Interest Applied: +" + interest +
+                " | New Balance: " + balance);
     }
 }
 
