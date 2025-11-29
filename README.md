@@ -240,7 +240,6 @@ public class BankAcctApp {
 }
 
 ------------------------------- account.java
-
 package courseProject;
 
 public abstract class Account {
@@ -271,9 +270,15 @@ public abstract class Account {
     public abstract void deposit(double amount, String date);
 
     public abstract void withdrawal(double amount, String date);
+
+    @Override
+    public String toString() {
+        // Print account number and balance in a neat line
+        return String.format("Account Number: %s | Balance: %.2f", 
+                              accountNumber == null ? "N/A" : accountNumber,
+                              balance);
+    }
 }
-
-
 
 ---------AccountInterface.java---------
 public interface AccountInterface {
