@@ -6,7 +6,6 @@ public interface AccountInterface {
     void withdrawal(double amount, String date) throws Exception;
     double balance(); // returns current balance
 }
-
 ----- Account.Java------
 package courseProject;
 
@@ -18,14 +17,19 @@ public abstract class Account implements AccountInterface {
         this.balance = startingBalance;
     }
 
+    // This validation logic is still used by the GUI to catch errors
     public void setAccountNumber(String num) {
-        if (num == null || num.trim().isEmpty()) throw new IllegalArgumentException("Account number cannot be blank.");
-        if (num.length() > 5) throw new IllegalArgumentException("Account number max length is 5.");
+        if (num == null || num.trim().isEmpty()) 
+            throw new IllegalArgumentException("Account number cannot be blank.");
+        if (num.length() > 5) 
+            throw new IllegalArgumentException("Account number max length is 5.");
         this.accountNumber = num;
     }
 
+    // The GUI calls these methods to update the "Balance" labels
     public String getAccountNumber() { return accountNumber; }
     public double getBalance() { return balance; }
+    
     public void setBalance(double b) { this.balance = b; }
 
     @Override
@@ -37,7 +41,6 @@ public abstract class Account implements AccountInterface {
                 accountNumber == null ? "N/A" : accountNumber, balance);
     }
 }
-
 ------- CheckingAccount.java ------
 package courseProject;
 
@@ -54,7 +57,6 @@ public class CheckingAccount extends Account {
         super(startingBalance);
     }
 
-    // validate date format (YYYY-MM-DD)
     private void validateDate(String date) throws Exception {
         try {
             LocalDate.parse(date);
@@ -63,7 +65,6 @@ public class CheckingAccount extends Account {
         }
     }
 
-    // type must be "DEP" or "WTH" - caller should ensure but we check in scenario
     @Override
     public void deposit(double amount, String date) throws Exception {
         validateDate(date);
@@ -71,7 +72,6 @@ public class CheckingAccount extends Account {
 
         balance += amount;
         balance -= SERVICE_FEE;
-        // print handled by caller; keep logic here
     }
 
     @Override
@@ -83,12 +83,11 @@ public class CheckingAccount extends Account {
         balance -= SERVICE_FEE;
 
         if (balance < 0) {
-            balance -= OVERDRAFT_FEE;
+            balance -= OVERDRAFT_FRAFT_FEE;
         }
     }
 
     public void applyInterest(String date) throws Exception {
-        // date validated for reporting consistency
         validateDate(date);
         double interest = balance * INTEREST_RATE;
         balance += interest;
@@ -156,6 +155,8 @@ public class Customer {
     private String zip;
     private String phone;
 
+    // Setters (getters are omitted for brevity but should be added if needed, 
+    // though the GUI code uses the objects directly)
     public void setCustomerID(String customerID) { this.customerID = customerID; }
     public void setSsn(String ssn) { this.ssn = ssn; }
     public void setLastName(String lastName) { this.lastName = lastName; }
@@ -165,6 +166,10 @@ public class Customer {
     public void setState(String state) { this.state = state; }
     public void setZip(String zip) { this.zip = zip; }
     public void setPhone(String phone) { this.phone = phone; }
+    
+    // Simple getters for display in the GUI class logic
+    public String getCustomerID() { return customerID; }
+    // ... other getters as needed
 
     @Override
     public String toString() {
@@ -173,269 +178,478 @@ public class Customer {
     }
 }
 
------DataEntry.Java-------
+// ----- BankAcctApp.java (Updated) ------
 package courseProject;
 
-import java.util.Scanner;
-
-public class DataEntry {
-    private static Scanner sc = new Scanner(System.in);
-
-    public static String getString(String prompt) {
-        System.out.print(prompt);
-        return sc.nextLine().trim();
-    }
-
-    public static String getLimitedString(String prompt, int maxLen) {
-        System.out.print(prompt);
-        String s = sc.nextLine().trim();
-        if (s.isEmpty()) throw new IllegalArgumentException("Input cannot be blank.");
-        if (s.length() > maxLen) throw new IllegalArgumentException("Input cannot exceed " + maxLen + " characters.");
-        return s;
-    }
-
-    public static String getNumericString(String prompt, int length) {
-        System.out.print(prompt);
-        String s = sc.nextLine().trim();
-        if (s.isEmpty()) throw new IllegalArgumentException("Input cannot be blank.");
-        if (!s.matches("\\d+")) throw new IllegalArgumentException("Input must be numeric.");
-        if (s.length() != length) throw new IllegalArgumentException("Input must be exactly " + length + " digits.");
-        return s;
-    }
-
-    public static double getDouble(String prompt) {
-        System.out.print(prompt);
-        String line = sc.nextLine().trim();
-        try {
-            return Double.parseDouble(line);
-        } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("Enter a valid decimal number.");
-        }
-    }
-}
-
------- bankAcctApp --------
-package courseProject;
-
-import java.util.ArrayList;
+import javax.swing.SwingUtilities;
 
 public class BankAcctApp {
 
     public static void main(String[] args) {
+        System.out.println("Starting Banking Application GUI...");
 
-        ArrayList<Customer> customers = new ArrayList<>();
-        ArrayList<Account> accounts = new ArrayList<>();
-
-        System.out.println("Welcome to the Banking Application - Phase 3");
-        System.out.println("--------------------------------------------");
-
-        boolean addMore = true;
-        while (addMore) {
-            Customer c = new Customer();
-            Account a = null;
-
-            System.out.println("\nEnter new customer information:");
-
-            // customer fields
-            while (true) {
-                try { c.setCustomerID(DataEntry.getLimitedString("Customer ID (max 5): ", 5)); break; }
-                catch (Exception e) { System.out.println("Error: " + e.getMessage()); }
-            }
-            while (true) {
-                try { c.setSsn(DataEntry.getNumericString("Customer SSN (9 digits): ", 9)); break; }
-                catch (Exception e) { System.out.println("Error: " + e.getMessage()); }
-            }
-            while (true) {
-                try { c.setLastName(DataEntry.getLimitedString("Last Name (max 20): ", 20)); break; }
-                catch (Exception e) { System.out.println("Error: " + e.getMessage()); }
-            }
-            while (true) {
-                try { c.setFirstName(DataEntry.getLimitedString("First Name (max 15): ", 15)); break; }
-                catch (Exception e) { System.out.println("Error: " + e.getMessage()); }
-            }
-            while (true) {
-                try { c.setStreet(DataEntry.getLimitedString("Street (max 20): ", 20)); break; }
-                catch (Exception e) { System.out.println("Error: " + e.getMessage()); }
-            }
-            while (true) {
-                try { c.setCity(DataEntry.getLimitedString("City (max 20): ", 20)); break; }
-                catch (Exception e) { System.out.println("Error: " + e.getMessage()); }
-            }
-            while (true) {
-                try { c.setState(DataEntry.getLimitedString("State (2 letters): ", 2)); break; }
-                catch (Exception e) { System.out.println("Error: " + e.getMessage()); }
-            }
-            while (true) {
-                try { c.setZip(DataEntry.getNumericString("Zip Code (5 digits): ", 5)); break; }
-                catch (Exception e) { System.out.println("Error: " + e.getMessage()); }
-            }
-            while (true) {
-                try { c.setPhone(DataEntry.getNumericString("Phone (10 digits): ", 10)); break; }
-                catch (Exception e) { System.out.println("Error: " + e.getMessage()); }
-            }
-
-            // account selection
-            String acctType = null;
-            while (true) {
-                try {
-                    acctType = DataEntry.getLimitedString("Account Type (CHK or SAV): ", 3);
-                    if (!acctType.equalsIgnoreCase("CHK") && !acctType.equalsIgnoreCase("SAV"))
-                        throw new IllegalArgumentException("Account type must be CHK or SAV.");
-                    break;
-                } catch (Exception e) {
-                    System.out.println("Error: " + e.getMessage());
-                }
-            }
-
-            double startBal = 0;
-            while (true) {
-                try { startBal = DataEntry.getDouble("Starting Balance: "); break; }
-                catch (Exception e) { System.out.println("Error: " + e.getMessage()); }
-            }
-
-            if (acctType.equalsIgnoreCase("CHK")) a = new CheckingAccount(startBal);
-            else a = new SavingsAccount(startBal);
-
-            while (true) {
-                try { a.setAccountNumber(DataEntry.getLimitedString("Account Number (max 5): ", 5)); break; }
-                catch (Exception e) { System.out.println("Error: " + e.getMessage()); }
-            }
-
-            customers.add(c);
-            accounts.add(a);
-
-            System.out.println("\nCustomer and Account added successfully!");
-            System.out.println("--------------------------------------------");
-            System.out.println(c);
-            System.out.println(a);
-
-            String ans = DataEntry.getString("\nAdd another customer? (Y/N): ");
-            addMore = ans.equalsIgnoreCase("Y");
-        }
-
-        // display lists
-        System.out.println("\nAll Customer Information:");
-        System.out.println("--------------------------------------------------------------------------------------------");
-        System.out.printf("%-8s %-10s %-15s %-15s %-20s %-15s %-5s %-5s %-10s%n",
-                "CustID", "SSN", "LastName", "FirstName", "Street", "City", "State", "Zip", "Phone");
-        System.out.println("--------------------------------------------------------------------------------------------");
-        for (Customer c : customers) System.out.println(c);
-
-        System.out.println("\nAccount Details:");
-        System.out.printf("%-12s %-6s %-12s %-12s%n", "Acct#", "Type", "Balance", "Class");
-        System.out.println("--------------------------------------------------------------");
-        for (Account acc : accounts) {
-            System.out.printf("%-12s %-6s %-12.2f %-12s%n",
-                    acc.getAccountNumber(),
-                    acc instanceof CheckingAccount ? "CHK" : "SAV",
-                    acc.getBalance(),
-                    acc.getClass().getSimpleName());
-        }
-
-        // ----------------- Perform required transaction scenario -----------------
-        // Find one checking and one savings (per project step 4/5)
-        CheckingAccount chk = null;
-        SavingsAccount sav = null;
-        Customer chkCust = null;
-        Customer savCust = null;
-
-        for (int i = 0; i < accounts.size(); i++) {
-            Account acc = accounts.get(i);
-            if (chk == null && acc instanceof CheckingAccount) { chk = (CheckingAccount) acc; chkCust = customers.get(i); }
-            if (sav == null && acc instanceof SavingsAccount) { sav = (SavingsAccount) acc; savCust = customers.get(i); }
-        }
-
-        if (chk == null || sav == null) {
-            System.out.println("\nSkipping transaction scenario: need at least one checking and one savings account.");
-            System.out.println("Make sure you created both account types.");
-            return;
-        }
-
-        // header for transaction log
-        System.out.println("\nTransaction Log:");
-        System.out.printf("%-8s %-8s %-4s %-12s %-4s %-10s %-12s %-12s%n",
-                "CustID", "Acct#", "Typ", "TransDate", "TT", "Amount", "Fees/Notes", "Balance");
-        System.out.println("-----------------------------------------------------------------------------------------");
-
-        // Helper lambda-like local calls (we'll just write explicit steps)
-        try {
-            // 1. Deposit $1000 into checking
-            chk.deposit(1000.0, "2025-11-28");
-            System.out.printf("%-8s %-8s %-4s %-12s %-4s $%-9.2f %-12s $%-11.2f%n",
-                    chkCust == null ? "N/A" : chkCust.toString().split(" ")[0],
-                    chk.getAccountNumber(),"CHK","2025-11-28","DEP",1000.0,"SvcFee $0.50", chk.getBalance());
-
-            // 2. Withdraw $500 from checking
-            chk.withdrawal(500.0, "2025-11-29");
-            System.out.printf("%-8s %-8s %-4s %-12s %-4s $%-9.2f %-12s $%-11.2f%n",
-                    chkCust == null ? "N/A" : chkCust.toString().split(" ")[0],
-                    chk.getAccountNumber(),"CHK","2025-11-29","WTH",500.0,"SvcFee $0.50", chk.getBalance());
-
-            // 3. Withdraw $501 from checking (causes overdraft & $30)
-            chk.withdrawal(501.0, "2025-11-30");
-            System.out.printf("%-8s %-8s %-4s %-12s %-4s $%-9.2f %-12s $%-11.2f%n",
-                    chkCust == null ? "N/A" : chkCust.toString().split(" ")[0],
-                    chk.getAccountNumber(),"CHK","2025-11-30","WTH",501.0,"SvcFee + Overdraft", chk.getBalance());
-
-            // 4. Deposit $500 into checking
-            chk.deposit(500.0, "2025-12-01");
-            System.out.printf("%-8s %-8s %-4s %-12s %-4s $%-9.2f %-12s $%-11.2f%n",
-                    chkCust == null ? "N/A" : chkCust.toString().split(" ")[0],
-                    chk.getAccountNumber(),"CHK","2025-12-01","DEP",500.0,"SvcFee $0.50", chk.getBalance());
-
-            // 5. Add interest to checking
-            chk.applyInterest("2025-12-02");
-            System.out.printf("%-8s %-8s %-4s %-12s %-4s %-10s %-12s $%-11.2f%n",
-                    chkCust == null ? "N/A" : chkCust.toString().split(" ")[0],
-                    chk.getAccountNumber(),"CHK","2025-12-02","INT",0.0,"Interest applied", chk.getBalance());
-
-            // 6. Deposit $1000 into savings
-            sav.deposit(1000.0, "2025-11-28");
-            System.out.printf("%-8s %-8s %-4s %-12s %-4s $%-9.2f %-12s $%-11.2f%n",
-                    savCust == null ? "N/A" : savCust.toString().split(" ")[0],
-                    sav.getAccountNumber(),"SAV","2025-11-28","DEP",1000.0,"SvcFee $0.25", sav.getBalance());
-
-            // 7. Withdraw $500 from savings
-            try {
-                sav.withdrawal(500.0, "2025-11-29");
-                System.out.printf("%-8s %-8s %-4s %-12s %-4s $%-9.2f %-12s $%-11.2f%n",
-                        savCust == null ? "N/A" : savCust.toString().split(" ")[0],
-                        sav.getAccountNumber(),"SAV","2025-11-29","WTH",500.0,"SvcFee $0.25", sav.getBalance());
-            } catch (Exception ex) {
-                System.out.printf("%-8s %-8s %-4s %-12s %-4s %-10s %-12s %-12s%n",
-                        savCust == null ? "N/A" : savCust.toString().split(" ")[0],
-                        sav.getAccountNumber(),"SAV","2025-11-29","WTH",500.0,"Denied", sav.getBalance());
-            }
-
-            // 8. Withdraw $501 from savings (should be denied if insufficient)
-            try {
-                sav.withdrawal(501.0, "2025-11-30");
-                System.out.printf("%-8s %-8s %-4s %-12s %-4s $%-9.2f %-12s $%-11.2f%n",
-                        savCust == null ? "N/A" : savCust.toString().split(" ")[0],
-                        sav.getAccountNumber(),"SAV","2025-11-30","WTH",501.0,"SvcFee $0.25", sav.getBalance());
-            } catch (Exception ex) {
-                System.out.printf("%-8s %-8s %-4s %-12s %-4s %-10s %-12s %-12s%n",
-                        savCust == null ? "N/A" : savCust.toString().split(" ")[0],
-                        sav.getAccountNumber(),"SAV","2025-11-30","WTH",501.0,"Denied", sav.getBalance());
-            }
-
-            // 9. Deposit $500 into savings
-            sav.deposit(500.0, "2025-12-01");
-            System.out.printf("%-8s %-8s %-4s %-12s %-4s $%-9.2f %-12s $%-11.2f%n",
-                    savCust == null ? "N/A" : savCust.toString().split(" ")[0],
-                    sav.getAccountNumber(),"SAV","2025-12-01","DEP",500.0,"SvcFee $0.25", sav.getBalance());
-
-            // 10. Add interest to savings
-            sav.applyInterest("2025-12-02");
-            System.out.printf("%-8s %-8s %-4s %-12s %-4s %-10s %-12s $%-11.2f%n",
-                    savCust == null ? "N/A" : savCust.toString().split(" ")[0],
-                    sav.getAccountNumber(),"SAV","2025-12-02","INT",0.0,"Interest applied", sav.getBalance());
-
-        } catch (Exception e) {
-            System.out.println("Transaction error: " + e.getMessage());
-        }
-
-        System.out.println("\nAll done — program complete.");
+        SwingUtilities.invokeLater(() -> {
+            new BankGUI(); // Launch the GUI
+        });
     }
 }
 
+// ----- BankGUI.java (New Class) ------
+package courseProject;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.util.ArrayList;
+
+public class BankGUI extends JFrame {
+
+    // --- Data Storage (Backend) ---
+    private ArrayList<Customer> customers = new ArrayList<>();
+    private ArrayList<Account> accounts = new ArrayList<>();
+    private final String[] STATES = {"AL", "CA", "FL", "NY", "TX", "WA"}; // At least 5 states
+
+    // --- GUI Components (Inputs) ---
+    private JTextField txtCustomerID, txtSSN, txtLastName, txtFirstName, txtStreet, 
+                       txtCity, txtZip, txtPhone, txtAcctNum, txtStartBal;
+    private JComboBox<String> cmbState;
+    private JRadioButton rdoChecking, rdoSavings;
+    private ButtonGroup acctTypeGroup;
+
+    // --- Transaction Components ---
+    private JTextField txtTransAmount, txtTransDate;
+    private JRadioButton rdoDeposit, rdoWithdrawal;
+    private ButtonGroup transTypeGroup;
+    private JTextField txtSearchAcctNum; // For search/transaction input
+
+    // --- Output Components ---
+    private JLabel lblStatus;
+    private JLabel lblOutCustID, lblOutAcctNum, lblOutAcctType, lblOutDate, 
+                   lblOutTransType, lblOutAmount, lblOutFees, lblOutBalance;
+
+    public BankGUI() {
+        setTitle("Banking Application - Customer and Transaction Manager");
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLayout(new BorderLayout(10, 10)); // Main layout
+
+        // 1. Initialize Components
+        initializeInputs();
+        initializeOutputs();
+        
+        // 2. Set up Layouts (CENTER and SOUTH)
+        add(createInputPanel(), BorderLayout.CENTER);
+        add(createOutputPanel(), BorderLayout.SOUTH);
+        
+        // 3. Set up Status (NORTH)
+        lblStatus = new JLabel("Application Ready. Enter new customer data.");
+        lblStatus.setHorizontalAlignment(SwingConstants.CENTER);
+        lblStatus.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+        add(lblStatus, BorderLayout.NORTH);
+
+        pack();
+        setLocationRelativeTo(null);
+        setVisible(true);
+    }
+    
+    // --- Initialization Methods ---
+    
+    private void initializeInputs() {
+        txtCustomerID = new JTextField(5);
+        txtSSN = new JTextField(9);
+        txtLastName = new JTextField(15);
+        txtFirstName = new JTextField(15);
+        txtStreet = new JTextField(20);
+        txtCity = new JTextField(15);
+        txtZip = new JTextField(5);
+        txtPhone = new JTextField(10);
+        
+        cmbState = new JComboBox<>(STATES);
+        
+        rdoChecking = new JRadioButton("Checking (CHK)");
+        rdoSavings = new JRadioButton("Savings (SAV)");
+        acctTypeGroup = new ButtonGroup();
+        acctTypeGroup.add(rdoChecking);
+        acctTypeGroup.add(rdoSavings);
+        rdoChecking.setSelected(true); // Default selection
+
+        txtAcctNum = new JTextField(5);
+        txtStartBal = new JTextField(10);
+        
+        txtSearchAcctNum = new JTextField(8);
+        txtTransAmount = new JTextField(8);
+        txtTransDate = new JTextField("YYYY-MM-DD", 10);
+        
+        rdoDeposit = new JRadioButton("Deposit", true);
+        rdoWithdrawal = new JRadioButton("Withdrawal");
+        transTypeGroup = new ButtonGroup();
+        transTypeGroup.add(rdoDeposit);
+        transTypeGroup.add(rdoWithdrawal);
+    }
+    
+    private void initializeOutputs() {
+        lblOutCustID = new JLabel("Cust ID:");
+        lblOutAcctNum = new JLabel("Acct #:");
+        lblOutAcctType = new JLabel("Type:");
+        lblOutDate = new JLabel("Date:");
+        lblOutTransType = new JLabel("TT:");
+        lblOutAmount = new JLabel("Amt:");
+        lblOutFees = new JLabel("Fees:");
+        lblOutBalance = new JLabel("Balance: $0.00");
+        lblOutBalance.setFont(new Font("SansSerif", Font.BOLD, 14));
+    }
+
+    // --- Layout Methods ---
+
+    private JPanel createInputPanel() {
+        JPanel mainPanel = new JPanel(new GridLayout(1, 2, 20, 10)); // Two columns: Customer & Transaction
+        
+        // Left Side: Customer & Account Creation (10 rows, 2 columns)
+        JPanel customerPanel = new JPanel(new GridLayout(12, 2, 5, 5));
+        customerPanel.setBorder(BorderFactory.createTitledBorder("New Customer & Account Data"));
+        
+        customerPanel.add(new JLabel("Customer ID (max 5):")); customerPanel.add(txtCustomerID);
+        customerPanel.add(new JLabel("SSN (9 digits):")); customerPanel.add(txtSSN);
+        customerPanel.add(new JLabel("Last Name (max 20):")); customerPanel.add(txtLastName);
+        customerPanel.add(new JLabel("First Name (max 15):")); customerPanel.add(txtFirstName);
+        customerPanel.add(new JLabel("Street (max 20):")); customerPanel.add(txtStreet);
+        customerPanel.add(new JLabel("City (max 20):")); customerPanel.add(txtCity);
+        
+        customerPanel.add(new JLabel("State (2 letters):")); customerPanel.add(cmbState);
+        customerPanel.add(new JLabel("Zip Code (5 digits):")); customerPanel.add(txtZip);
+        customerPanel.add(new JLabel("Phone (10 digits):")); customerPanel.add(txtPhone);
+        
+        customerPanel.add(new JLabel("Account Type:"));
+        JPanel radioPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        radioPanel.add(rdoChecking); radioPanel.add(rdoSavings);
+        customerPanel.add(radioPanel);
+        
+        customerPanel.add(new JLabel("Account Number (max 5):")); customerPanel.add(txtAcctNum);
+        customerPanel.add(new JLabel("Starting Balance:")); customerPanel.add(txtStartBal);
+        
+        // Right Side: Transactions and Action Buttons
+        JPanel actionPanel = new JPanel(new BorderLayout(10, 10));
+        actionPanel.setBorder(BorderFactory.createTitledBorder("Actions & Transactions"));
+        
+        // Top of Action Panel: Action Buttons
+        JPanel buttonPanel = new JPanel(new GridLayout(3, 1, 10, 10));
+        JButton btnAddCustomer = new JButton("Add New Customer and Account");
+        JButton btnDisplay = new JButton("Display Customer/Account Data");
+        JButton btnClear = new JButton("Clear All Fields");
+        
+        buttonPanel.add(btnAddCustomer);
+        buttonPanel.add(btnDisplay);
+        buttonPanel.add(btnClear);
+        actionPanel.add(buttonPanel, BorderLayout.NORTH);
+        
+        // Center of Action Panel: Transaction Input
+        JPanel transPanel = new JPanel(new GridLayout(5, 2, 5, 5));
+        transPanel.setBorder(BorderFactory.createTitledBorder("Perform Transaction"));
+        
+        transPanel.add(new JLabel("Account # to Transact:")); transPanel.add(txtSearchAcctNum);
+        transPanel.add(new JLabel("Transaction Amount:")); transPanel.add(txtTransAmount);
+        transPanel.add(new JLabel("Transaction Date:")); transPanel.add(txtTransDate);
+
+        transPanel.add(new JLabel("Transaction Type:"));
+        JPanel transRadioPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        transRadioPanel.add(rdoDeposit); transRadioPanel.add(rdoWithdrawal);
+        transPanel.add(transRadioPanel);
+
+        JButton btnPerformTrans = new JButton("Perform Transaction");
+        transPanel.add(btnPerformTrans);
+        transPanel.add(new JButton("Apply Interest Earned")); // New button for interest
+        actionPanel.add(transPanel, BorderLayout.CENTER);
+        
+        mainPanel.add(customerPanel);
+        mainPanel.add(actionPanel);
+        
+        // --- Register Listeners ---
+        btnAddCustomer.addActionListener(this::addNewCustomer);
+        btnDisplay.addActionListener(this::displayCustomer);
+        btnClear.addActionListener(this::clearFields);
+        btnPerformTrans.addActionListener(this::performTransaction);
+        
+        // Find the "Apply Interest Earned" button and register its listener
+        ((JButton) transPanel.getComponent(9)).addActionListener(this::applyInterest);
+
+        return mainPanel;
+    }
+    
+    private JPanel createOutputPanel() {
+        JPanel outputPanel = new JPanel(new GridLayout(2, 4, 10, 5));
+        outputPanel.setBorder(BorderFactory.createTitledBorder("Last Transaction / Account Info"));
+        
+        outputPanel.add(lblOutCustID);
+        outputPanel.add(lblOutAcctNum);
+        outputPanel.add(lblOutAcctType);
+        outputPanel.add(lblOutDate);
+        
+        outputPanel.add(lblOutTransType);
+        outputPanel.add(lblOutAmount);
+        outputPanel.add(lblOutFees);
+        outputPanel.add(lblOutBalance);
+        
+        return outputPanel;
+    }
+
+    // --- Core Logic Methods ---
+
+    private void setStatus(String message, boolean isError) {
+        lblStatus.setText(message);
+        lblStatus.setForeground(isError ? Color.RED : Color.BLUE);
+    }
+    
+    private void clearFields(ActionEvent e) {
+        txtCustomerID.setText("");
+        txtSSN.setText("");
+        txtLastName.setText("");
+        txtFirstName.setText("");
+        txtStreet.setText("");
+        txtCity.setText("");
+        cmbState.setSelectedIndex(0);
+        txtZip.setText("");
+        txtPhone.setText("");
+        txtAcctNum.setText("");
+        txtStartBal.setText("");
+        txtTransAmount.setText("");
+        txtTransDate.setText("YYYY-MM-DD");
+        txtSearchAcctNum.setText("");
+        
+        // Clear outputs
+        lblOutCustID.setText("Cust ID:");
+        lblOutAcctNum.setText("Acct #:");
+        lblOutAcctType.setText("Type:");
+        lblOutDate.setText("Date:");
+        lblOutTransType.setText("TT:");
+        lblOutAmount.setText("Amt:");
+        lblOutFees.setText("Fees:");
+        lblOutBalance.setText("Balance: $0.00");
+        setStatus("All fields cleared.", false);
+    }
+
+    private void addNewCustomer(ActionEvent e) {
+        Customer c = new Customer();
+        Account a = null;
+        double startBal = 0.0;
+        
+        try {
+            // Validate and set Customer fields
+            c.setCustomerID(validateLimitedString(txtCustomerID.getText(), "Customer ID", 5));
+            c.setSsn(validateNumericString(txtSSN.getText(), "SSN", 9));
+            c.setLastName(validateLimitedString(txtLastName.getText(), "Last Name", 20));
+            c.setFirstName(validateLimitedString(txtFirstName.getText(), "First Name", 15));
+            c.setStreet(validateLimitedString(txtStreet.getText(), "Street", 20));
+            c.setCity(validateLimitedString(txtCity.getText(), "City", 20));
+            c.setState((String) cmbState.getSelectedItem()); // ComboBox handles validation
+            c.setZip(validateNumericString(txtZip.getText(), "Zip Code", 5));
+            c.setPhone(validateNumericString(txtPhone.getText(), "Phone", 10));
+
+            // Validate and instantiate Account
+            startBal = validateDouble(txtStartBal.getText(), "Starting Balance");
+            if (rdoChecking.isSelected()) {
+                a = new CheckingAccount(startBal);
+            } else if (rdoSavings.isSelected()) {
+                a = new SavingsAccount(startBal);
+            } else {
+                throw new Exception("Please select an Account Type.");
+            }
+
+            // Validate and set Account Number
+            a.setAccountNumber(validateLimitedString(txtAcctNum.getText(), "Account Number", 5));
+            
+            // Check for duplicate account number (simple check)
+            for (Account existingAcct : accounts) {
+                if (existingAcct.getAccountNumber().equals(a.getAccountNumber())) {
+                    throw new Exception("Account number already exists.");
+                }
+            }
+
+            // Add to lists
+            customers.add(c);
+            accounts.add(a);
+            
+            setStatus("SUCCESS! Customer " + c.toString().split(" ")[0] + " added with Account " + a.getAccountNumber(), false);
+        } catch (Exception ex) {
+            setStatus("Error adding customer: " + ex.getMessage(), true);
+        }
+    }
+    
+    private void displayCustomer(ActionEvent e) {
+        String searchAcctNum = txtSearchAcctNum.getText().trim();
+        try {
+            if (searchAcctNum.isEmpty()) throw new Exception("Enter an Account # to display.");
+            
+            int index = -1;
+            for (int i = 0; i < accounts.size(); i++) {
+                if (accounts.get(i).getAccountNumber().equals(searchAcctNum)) {
+                    index = i;
+                    break;
+                }
+            }
+
+            if (index == -1) throw new Exception("Account not found.");
+
+            Customer c = customers.get(index);
+            Account a = accounts.get(index);
+            
+            String acctType = a instanceof CheckingAccount ? "CHK" : "SAV";
+            
+            // Update Output Labels with current data
+            lblOutCustID.setText("Cust ID: " + c.toString().split(" ")[0]);
+            lblOutAcctNum.setText("Acct #: " + a.getAccountNumber());
+            lblOutAcctType.setText("Type: " + acctType);
+            lblOutBalance.setText(String.format("Balance: $%.2f", a.getBalance()));
+            
+            // Clear transaction specific fields
+            lblOutDate.setText("Date:");
+            lblOutTransType.setText("TT:");
+            lblOutAmount.setText("Amt:");
+            lblOutFees.setText("Fees:");
+            
+            setStatus("Displaying data for Account " + searchAcctNum, false);
+
+        } catch (Exception ex) {
+            setStatus("Error displaying data: " + ex.getMessage(), true);
+        }
+    }
+
+    private void performTransaction(ActionEvent e) {
+        String searchAcctNum = txtSearchAcctNum.getText().trim();
+        double amount = 0.0;
+        String date = txtTransDate.getText().trim();
+        String transType = rdoDeposit.isSelected() ? "DEP" : "WTH";
+        
+        try {
+            if (searchAcctNum.isEmpty()) throw new Exception("Enter an Account # to transact.");
+            amount = validateDouble(txtTransAmount.getText(), "Transaction Amount");
+            
+            // 1. Find the Account
+            int index = -1;
+            for (int i = 0; i < accounts.size(); i++) {
+                if (accounts.get(i).getAccountNumber().equals(searchAcctNum)) {
+                    index = i;
+                    break;
+                }
+            }
+            if (index == -1) throw new Exception("Account not found.");
+            
+            Account a = accounts.get(index);
+            double balanceBefore = a.getBalance();
+            double feeBefore = 0.0;
+            
+            // Determine fees for display (pre-transaction)
+            if (a instanceof CheckingAccount) {
+                feeBefore = 0.50; // Service Fee
+                if (transType.equals("WTH") && (balanceBefore - amount - 0.50) < 0) {
+                    feeBefore += 30.00; // Overdraft Fee
+                }
+            } else if (a instanceof SavingsAccount) {
+                feeBefore = 0.25;
+            }
+
+            // 2. Perform the Transaction
+            if (transType.equals("DEP")) {
+                a.deposit(amount, date);
+            } else { // Withdrawal
+                a.withdrawal(amount, date);
+            }
+            
+            // 3. Update Output Labels
+            Customer c = customers.get(index);
+            String acctType = a instanceof CheckingAccount ? "CHK" : "SAV";
+            double balanceAfter = a.getBalance();
+            double feesCharged = balanceBefore + (transType.equals("WTH") ? -amount : amount) - balanceAfter;
+            
+            lblOutCustID.setText("Cust ID: " + c.toString().split(" ")[0]);
+            lblOutAcctNum.setText("Acct #: " + a.getAccountNumber());
+            lblOutAcctType.setText("Type: " + acctType);
+            lblOutDate.setText("Date: " + date);
+            lblOutTransType.setText("TT: " + transType);
+            lblOutAmount.setText(String.format("Amt: $%.2f", amount));
+            lblOutFees.setText(String.format("Fees: $%.2f", Math.abs(feesCharged)));
+            lblOutBalance.setText(String.format("Balance: $%.2f", a.getBalance()));
+
+            setStatus("SUCCESS! Transaction completed for Account " + searchAcctNum, false);
+
+        } catch (Exception ex) {
+            // Display error and current balance
+            Account a = accounts.get(index);
+            lblOutBalance.setText(String.format("Balance: $%.2f", a.getBalance()));
+            setStatus("Transaction FAILED: " + ex.getMessage(), true);
+        }
+    }
+    
+    private void applyInterest(ActionEvent e) {
+        String searchAcctNum = txtSearchAcctNum.getText().trim();
+        String date = txtTransDate.getText().trim();
+        
+        try {
+            if (searchAcctNum.isEmpty()) throw new Exception("Enter an Account # to apply interest.");
+            
+            // 1. Find the Account
+            int index = -1;
+            for (int i = 0; i < accounts.size(); i++) {
+                if (accounts.get(i).getAccountNumber().equals(searchAcctNum)) {
+                    index = i;
+                    break;
+                }
+            }
+            if (index == -1) throw new Exception("Account not found.");
+            
+            Account a = accounts.get(index);
+            double balanceBefore = a.getBalance();
+
+            if (a instanceof CheckingAccount) {
+                ((CheckingAccount) a).applyInterest(date);
+            } else if (a instanceof SavingsAccount) {
+                ((SavingsAccount) a).applyInterest(date);
+            } else {
+                throw new Exception("Account type not recognized.");
+            }
+            
+            // 3. Update Output Labels
+            Customer c = customers.get(index);
+            String acctType = a instanceof CheckingAccount ? "CHK" : "SAV";
+            double interestAmount = a.getBalance() - balanceBefore;
+            
+            lblOutCustID.setText("Cust ID: " + c.toString().split(" ")[0]);
+            lblOutAcctNum.setText("Acct #: " + a.getAccountNumber());
+            lblOutAcctType.setText("Type: " + acctType);
+            lblOutDate.setText("Date: " + date);
+            lblOutTransType.setText("TT: INT");
+            lblOutAmount.setText("Amt: $0.00");
+            lblOutFees.setText(String.format("Interest: $%.2f", interestAmount));
+            lblOutBalance.setText(String.format("Balance: $%.2f", a.getBalance()));
+
+            setStatus("SUCCESS! Interest applied to Account " + searchAcctNum, false);
+
+        } catch (Exception ex) {
+            setStatus("Interest application FAILED: " + ex.getMessage(), true);
+        }
+    }
+    
+    // --- Reusable Validation Helpers (Adapted from DataEntry.java) ---
+
+    private String validateLimitedString(String s, String name, int maxLen) throws Exception {
+        s = s.trim();
+        if (s.isEmpty()) throw new Exception(name + " cannot be blank.");
+        if (s.length() > maxLen) throw new Exception(name + " max length is " + maxLen + ".");
+        return s;
+    }
+
+    private String validateNumericString(String s, String name, int length) throws Exception {
+        s = s.trim();
+        if (s.isEmpty()) throw new Exception(name + " cannot be blank.");
+        if (!s.matches("\\d+")) throw new Exception(name + " must be numeric.");
+        if (s.length() != length) throw new Exception(name + " must be exactly " + length + " digits.");
+        return s;
+    }
+    
+    private double validateDouble(String s, String name) throws Exception {
+        s = s.trim();
+        try {
+            return Double.parseDouble(s);
+        } catch (NumberFormatException e) {
+            throw new Exception("Enter a valid decimal number for " + name + ".");
+        }
+    }
+}
