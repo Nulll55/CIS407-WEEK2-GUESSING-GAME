@@ -17,24 +17,29 @@ public abstract class Account implements AccountInterface {
         this.balance = startingBalance;
     }
 
-    // This validation logic is still used by the GUI to catch errors
     public void setAccountNumber(String num) {
-        if (num == null || num.trim().isEmpty()) 
+        if (num == null || num.trim().isEmpty()) {
             throw new IllegalArgumentException("Account number cannot be blank.");
-        if (num.length() > 5) 
+        }
+        if (num.length() > 5) {
             throw new IllegalArgumentException("Account number max length is 5.");
+        }
         this.accountNumber = num;
     }
 
-    // The GUI calls these methods to update the "Balance" labels
     public String getAccountNumber() { return accountNumber; }
     public double getBalance() { return balance; }
-    
     public void setBalance(double b) { this.balance = b; }
 
     @Override
     public double balance() { return balance; }
 
+    @Override
+    public abstract void deposit(double amount, String date) throws Exception;
+
+    @Override
+    public abstract void withdrawal(double amount, String date) throws Exception;
+    
     @Override
     public String toString() {
         return String.format("Account Number: %s | Balance: %.2f", 
@@ -57,9 +62,11 @@ public class CheckingAccount extends Account {
         super(startingBalance);
     }
 
+    // Helper method to validate date format (used by all transaction methods)
     private void validateDate(String date) throws Exception {
         try {
-            LocalDate.parse(date);
+            // Checks if the string can be parsed into a valid date (YYYY-MM-DD)
+            LocalDate.parse(date); 
         } catch (DateTimeParseException ex) {
             throw new Exception("Invalid date. Use YYYY-MM-DD.");
         }
@@ -71,7 +78,7 @@ public class CheckingAccount extends Account {
         if (amount <= 0) throw new Exception("Deposit must be positive.");
 
         balance += amount;
-        balance -= SERVICE_FEE;
+        balance -= SERVICE_FEE; // Apply service fee
     }
 
     @Override
@@ -80,10 +87,11 @@ public class CheckingAccount extends Account {
         if (amount <= 0) throw new Exception("Withdrawal must be positive.");
 
         balance -= amount;
-        balance -= SERVICE_FEE;
+        balance -= SERVICE_FEE; // Apply service fee
 
+        // Check for overdraft AFTER the withdrawal and fee
         if (balance < 0) {
-            balance -= OVERDRAFT_FRAFT_FEE;
+            balance -= OVERDRAFT_FEE; // Apply overdraft fee
         }
     }
 
@@ -108,9 +116,10 @@ public class SavingsAccount extends Account {
         super(startingBalance);
     }
 
+    // Helper method to validate date format
     private void validateDate(String date) throws Exception {
         try {
-            LocalDate.parse(date);
+            LocalDate.parse(date); 
         } catch (DateTimeParseException ex) {
             throw new Exception("Invalid date. Use YYYY-MM-DD.");
         }
@@ -120,19 +129,24 @@ public class SavingsAccount extends Account {
     public void deposit(double amount, String date) throws Exception {
         validateDate(date);
         if (amount <= 0) throw new Exception("Deposit must be positive.");
+        
         balance += amount;
-        balance -= SERVICE_FEE;
+        balance -= SERVICE_FEE; // Apply service fee
     }
 
     @Override
     public void withdrawal(double amount, String date) throws Exception {
         validateDate(date);
         if (amount <= 0) throw new Exception("Withdrawal must be positive.");
+        
+        // CRITICAL: Check if the transaction + fee will cause an overdraft
         if (amount + SERVICE_FEE > balance) {
             throw new Exception("Savings accounts cannot be overdrawn. Withdrawal denied.");
         }
+        
+        // If the check passes, perform the transaction
         balance -= amount;
-        balance -= SERVICE_FEE;
+        balance -= SERVICE_FEE; // Apply service fee
     }
 
     public void applyInterest(String date) throws Exception {
@@ -197,459 +211,152 @@ public class BankAcctApp {
 // ----- BankGUI.java (New Class) ------
 package courseProject;
 
-import javax.swing.*;
-import java.awt.*;
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+import javax.swing.JLabel;
+import javax.swing.JButton;
+import javax.swing.JTextField;
+import javax.swing.JTextArea;
+import javax.swing.JRadioButton;
+import javax.swing.ButtonGroup;
+import javax.swing.JComboBox;
+import javax.swing.JOptionPane; // Useful for pop-up messages
+import java.awt.BorderLayout;
+import java.awt.GridLayout;
+import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+
 import java.util.ArrayList;
 
-public class BankGUI extends JFrame {
+public class BankGUI extends JFrame implements ActionListener { 
 
-    // --- Data Storage (Backend) ---
-    private ArrayList<Customer> customers = new ArrayList<>();
-    private ArrayList<Account> accounts = new ArrayList<>();
-    private final String[] STATES = {"AL", "CA", "FL", "NY", "TX", "WA"}; // At least 5 states
+    // --- DATA STORAGE ---
+    private ArrayList<Customer> customerList = new ArrayList<>();
+    private ArrayList<Account> accountList = new ArrayList<>();
 
-    // --- GUI Components (Inputs) ---
-    private JTextField txtCustomerID, txtSSN, txtLastName, txtFirstName, txtStreet, 
-                       txtCity, txtZip, txtPhone, txtAcctNum, txtStartBal;
-    private JComboBox<String> cmbState;
-    private JRadioButton rdoChecking, rdoSavings;
-    private ButtonGroup acctTypeGroup;
+    // --- GUI COMPONENTS (Define the main components here) ---
+    // Customer Fields
+    private JTextField customerIdField;
+    private JTextField ssnField;
+    private JTextField lastNameField;
+    // ... add all other JTextFields for address, phone, etc. ...
 
-    // --- Transaction Components ---
-    private JTextField txtTransAmount, txtTransDate;
-    private JRadioButton rdoDeposit, rdoWithdrawal;
-    private ButtonGroup transTypeGroup;
-    private JTextField txtSearchAcctNum; // For search/transaction input
+    // Account Fields
+    private JRadioButton checkingRadio;
+    private JRadioButton savingsRadio;
+    private ButtonGroup accountTypeGroup;
+    private JTextField accountNumberField;
+    private JTextField startingBalanceField;
 
-    // --- Output Components ---
-    private JLabel lblStatus;
-    private JLabel lblOutCustID, lblOutAcctNum, lblOutAcctType, lblOutDate, 
-                   lblOutTransType, lblOutAmount, lblOutFees, lblOutBalance;
+    // Transaction Fields
+    private JTextField transactAccountField;
+    private JTextField transactAmountField;
+    private JTextField transactDateField;
+    private JRadioButton depositRadio;
+    private JRadioButton withdrawalRadio;
+    private ButtonGroup transactionTypeGroup;
 
+    // Buttons
+    private JButton addCustomerButton;
+    private JButton displayButton;
+    private JButton clearFieldsButton;
+    private JButton performTransactionButton;
+    private JButton applyInterestButton;
+    
+    // Output Areas
+    private JTextArea actionOutputArea; // For "SUCCESS! Customer added" messages
+    private JLabel lastTransactionLabel; // For displaying last transaction info
+    private JLabel balanceLabel; // For displaying the current balance
+
+    // --- CONSTRUCTOR: Build the GUI ---
     public BankGUI() {
-        setTitle("Banking Application - Customer and Transaction Manager");
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLayout(new BorderLayout(10, 10)); // Main layout
+        // 1. JFrame Setup
+        super("Banking Application - Customer and Transaction Manager");
+        this.setSize(900, 650);
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); 
+        this.setLayout(new BorderLayout(10, 10)); // Use a main layout
 
-        // 1. Initialize Components
-        initializeInputs();
-        initializeOutputs();
+        // 2. Initialize Components (example)
+        customerIdField = new JTextField(5);
+        addCustomerButton = new JButton("Add New Customer and Account");
         
-        // 2. Set up Layouts (CENTER and SOUTH)
-        add(createInputPanel(), BorderLayout.CENTER);
-        add(createOutputPanel(), BorderLayout.SOUTH);
+        // 3. Assemble Panels (You will define panels for each section later)
+        JPanel mainPanel = new JPanel(new GridLayout(1, 2, 10, 10));
         
-        // 3. Set up Status (NORTH)
-        lblStatus = new JLabel("Application Ready. Enter new customer data.");
-        lblStatus.setHorizontalAlignment(SwingConstants.CENTER);
-        lblStatus.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
-        add(lblStatus, BorderLayout.NORTH);
+        // Example: Setup the Actions/Transactions area (Top right)
+        actionOutputArea = new JTextArea(3, 20);
+        actionOutputArea.setEditable(false);
+        // ... (You will need many more panels for the layout shown in your screenshots) ...
 
-        pack();
-        setLocationRelativeTo(null);
-        setVisible(true);
+        // 4. Register Listeners
+        addCustomerButton.addActionListener(this);
+        performTransactionButton.addActionListener(this);
+        // ... register all other buttons ...
+        
+        // 5. Add Panels to Frame
+        // Example: this.add(mainPanel, BorderLayout.CENTER);
+        
+        // 6. Finalize
+        this.pack(); // Adjusts size to fit components (or use setSize if preferred)
+        this.setLocationRelativeTo(null); // Centers the window
+        this.setVisible(true); 
+    }
+
+    // --- ACTIONLISTENER IMPLEMENTATION (Handles button clicks) ---
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        // Determine which button was clicked
+        if (e.getSource() == addCustomerButton) {
+            handleAddCustomer();
+        } else if (e.getSource() == performTransactionButton) {
+            handlePerformTransaction();
+        } 
+        // ... add logic for other buttons ...
     }
     
-    // --- Initialization Methods ---
-    
-    private void initializeInputs() {
-        txtCustomerID = new JTextField(5);
-        txtSSN = new JTextField(9);
-        txtLastName = new JTextField(15);
-        txtFirstName = new JTextField(15);
-        txtStreet = new JTextField(20);
-        txtCity = new JTextField(15);
-        txtZip = new JTextField(5);
-        txtPhone = new JTextField(10);
-        
-        cmbState = new JComboBox<>(STATES);
-        
-        rdoChecking = new JRadioButton("Checking (CHK)");
-        rdoSavings = new JRadioButton("Savings (SAV)");
-        acctTypeGroup = new ButtonGroup();
-        acctTypeGroup.add(rdoChecking);
-        acctTypeGroup.add(rdoSavings);
-        rdoChecking.setSelected(true); // Default selection
-
-        txtAcctNum = new JTextField(5);
-        txtStartBal = new JTextField(10);
-        
-        txtSearchAcctNum = new JTextField(8);
-        txtTransAmount = new JTextField(8);
-        txtTransDate = new JTextField("YYYY-MM-DD", 10);
-        
-        rdoDeposit = new JRadioButton("Deposit", true);
-        rdoWithdrawal = new JRadioButton("Withdrawal");
-        transTypeGroup = new ButtonGroup();
-        transTypeGroup.add(rdoDeposit);
-        transTypeGroup.add(rdoWithdrawal);
-    }
-    
-    private void initializeOutputs() {
-        lblOutCustID = new JLabel("Cust ID:");
-        lblOutAcctNum = new JLabel("Acct #:");
-        lblOutAcctType = new JLabel("Type:");
-        lblOutDate = new JLabel("Date:");
-        lblOutTransType = new JLabel("TT:");
-        lblOutAmount = new JLabel("Amt:");
-        lblOutFees = new JLabel("Fees:");
-        lblOutBalance = new JLabel("Balance: $0.00");
-        lblOutBalance.setFont(new Font("SansSerif", Font.BOLD, 14));
-    }
-
-    // --- Layout Methods ---
-
-    private JPanel createInputPanel() {
-        JPanel mainPanel = new JPanel(new GridLayout(1, 2, 20, 10)); // Two columns: Customer & Transaction
-        
-        // Left Side: Customer & Account Creation (10 rows, 2 columns)
-        JPanel customerPanel = new JPanel(new GridLayout(12, 2, 5, 5));
-        customerPanel.setBorder(BorderFactory.createTitledBorder("New Customer & Account Data"));
-        
-        customerPanel.add(new JLabel("Customer ID (max 5):")); customerPanel.add(txtCustomerID);
-        customerPanel.add(new JLabel("SSN (9 digits):")); customerPanel.add(txtSSN);
-        customerPanel.add(new JLabel("Last Name (max 20):")); customerPanel.add(txtLastName);
-        customerPanel.add(new JLabel("First Name (max 15):")); customerPanel.add(txtFirstName);
-        customerPanel.add(new JLabel("Street (max 20):")); customerPanel.add(txtStreet);
-        customerPanel.add(new JLabel("City (max 20):")); customerPanel.add(txtCity);
-        
-        customerPanel.add(new JLabel("State (2 letters):")); customerPanel.add(cmbState);
-        customerPanel.add(new JLabel("Zip Code (5 digits):")); customerPanel.add(txtZip);
-        customerPanel.add(new JLabel("Phone (10 digits):")); customerPanel.add(txtPhone);
-        
-        customerPanel.add(new JLabel("Account Type:"));
-        JPanel radioPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        radioPanel.add(rdoChecking); radioPanel.add(rdoSavings);
-        customerPanel.add(radioPanel);
-        
-        customerPanel.add(new JLabel("Account Number (max 5):")); customerPanel.add(txtAcctNum);
-        customerPanel.add(new JLabel("Starting Balance:")); customerPanel.add(txtStartBal);
-        
-        // Right Side: Transactions and Action Buttons
-        JPanel actionPanel = new JPanel(new BorderLayout(10, 10));
-        actionPanel.setBorder(BorderFactory.createTitledBorder("Actions & Transactions"));
-        
-        // Top of Action Panel: Action Buttons
-        JPanel buttonPanel = new JPanel(new GridLayout(3, 1, 10, 10));
-        JButton btnAddCustomer = new JButton("Add New Customer and Account");
-        JButton btnDisplay = new JButton("Display Customer/Account Data");
-        JButton btnClear = new JButton("Clear All Fields");
-        
-        buttonPanel.add(btnAddCustomer);
-        buttonPanel.add(btnDisplay);
-        buttonPanel.add(btnClear);
-        actionPanel.add(buttonPanel, BorderLayout.NORTH);
-        
-        // Center of Action Panel: Transaction Input
-        JPanel transPanel = new JPanel(new GridLayout(5, 2, 5, 5));
-        transPanel.setBorder(BorderFactory.createTitledBorder("Perform Transaction"));
-        
-        transPanel.add(new JLabel("Account # to Transact:")); transPanel.add(txtSearchAcctNum);
-        transPanel.add(new JLabel("Transaction Amount:")); transPanel.add(txtTransAmount);
-        transPanel.add(new JLabel("Transaction Date:")); transPanel.add(txtTransDate);
-
-        transPanel.add(new JLabel("Transaction Type:"));
-        JPanel transRadioPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        transRadioPanel.add(rdoDeposit); transRadioPanel.add(rdoWithdrawal);
-        transPanel.add(transRadioPanel);
-
-        JButton btnPerformTrans = new JButton("Perform Transaction");
-        transPanel.add(btnPerformTrans);
-        transPanel.add(new JButton("Apply Interest Earned")); // New button for interest
-        actionPanel.add(transPanel, BorderLayout.CENTER);
-        
-        mainPanel.add(customerPanel);
-        mainPanel.add(actionPanel);
-        
-        // --- Register Listeners ---
-        btnAddCustomer.addActionListener(this::addNewCustomer);
-        btnDisplay.addActionListener(this::displayCustomer);
-        btnClear.addActionListener(this::clearFields);
-        btnPerformTrans.addActionListener(this::performTransaction);
-        
-        // Find the "Apply Interest Earned" button and register its listener
-        ((JButton) transPanel.getComponent(9)).addActionListener(this::applyInterest);
-
-        return mainPanel;
-    }
-    
-    private JPanel createOutputPanel() {
-        JPanel outputPanel = new JPanel(new GridLayout(2, 4, 10, 5));
-        outputPanel.setBorder(BorderFactory.createTitledBorder("Last Transaction / Account Info"));
-        
-        outputPanel.add(lblOutCustID);
-        outputPanel.add(lblOutAcctNum);
-        outputPanel.add(lblOutAcctType);
-        outputPanel.add(lblOutDate);
-        
-        outputPanel.add(lblOutTransType);
-        outputPanel.add(lblOutAmount);
-        outputPanel.add(lblOutFees);
-        outputPanel.add(lblOutBalance);
-        
-        return outputPanel;
-    }
-
-    // --- Core Logic Methods ---
-
-    private void setStatus(String message, boolean isError) {
-        lblStatus.setText(message);
-        lblStatus.setForeground(isError ? Color.RED : Color.BLUE);
-    }
-    
-    private void clearFields(ActionEvent e) {
-        txtCustomerID.setText("");
-        txtSSN.setText("");
-        txtLastName.setText("");
-        txtFirstName.setText("");
-        txtStreet.setText("");
-        txtCity.setText("");
-        cmbState.setSelectedIndex(0);
-        txtZip.setText("");
-        txtPhone.setText("");
-        txtAcctNum.setText("");
-        txtStartBal.setText("");
-        txtTransAmount.setText("");
-        txtTransDate.setText("YYYY-MM-DD");
-        txtSearchAcctNum.setText("");
-        
-        // Clear outputs
-        lblOutCustID.setText("Cust ID:");
-        lblOutAcctNum.setText("Acct #:");
-        lblOutAcctType.setText("Type:");
-        lblOutDate.setText("Date:");
-        lblOutTransType.setText("TT:");
-        lblOutAmount.setText("Amt:");
-        lblOutFees.setText("Fees:");
-        lblOutBalance.setText("Balance: $0.00");
-        setStatus("All fields cleared.", false);
-    }
-
-    private void addNewCustomer(ActionEvent e) {
-        Customer c = new Customer();
-        Account a = null;
-        double startBal = 0.0;
+    // --- HANDLER METHODS (Core logic hooks) ---
+    private void handleAddCustomer() {
+        // 1. Get user input from all fields (Customer ID, SSN, Balances, etc.)
+        String custId = customerIdField.getText();
         
         try {
-            // Validate and set Customer fields
-            c.setCustomerID(validateLimitedString(txtCustomerID.getText(), "Customer ID", 5));
-            c.setSsn(validateNumericString(txtSSN.getText(), "SSN", 9));
-            c.setLastName(validateLimitedString(txtLastName.getText(), "Last Name", 20));
-            c.setFirstName(validateLimitedString(txtFirstName.getText(), "First Name", 15));
-            c.setStreet(validateLimitedString(txtStreet.getText(), "Street", 20));
-            c.setCity(validateLimitedString(txtCity.getText(), "City", 20));
-            c.setState((String) cmbState.getSelectedItem()); // ComboBox handles validation
-            c.setZip(validateNumericString(txtZip.getText(), "Zip Code", 5));
-            c.setPhone(validateNumericString(txtPhone.getText(), "Phone", 10));
-
-            // Validate and instantiate Account
-            startBal = validateDouble(txtStartBal.getText(), "Starting Balance");
-            if (rdoChecking.isSelected()) {
-                a = new CheckingAccount(startBal);
-            } else if (rdoSavings.isSelected()) {
-                a = new SavingsAccount(startBal);
-            } else {
-                throw new Exception("Please select an Account Type.");
-            }
-
-            // Validate and set Account Number
-            a.setAccountNumber(validateLimitedString(txtAcctNum.getText(), "Account Number", 5));
+            // 2. Instantiate new Customer and Account objects (using CheckingAccount or SavingsAccount)
+            // Example: Account newAccount = new CheckingAccount(startingBalance);
+            // Example: Customer newCustomer = new Customer();
             
-            // Check for duplicate account number (simple check)
-            for (Account existingAcct : accounts) {
-                if (existingAcct.getAccountNumber().equals(a.getAccountNumber())) {
-                    throw new Exception("Account number already exists.");
-                }
-            }
-
-            // Add to lists
-            customers.add(c);
-            accounts.add(a);
+            // 3. Add to lists
+            // customerList.add(newCustomer);
+            // accountList.add(newAccount);
             
-            setStatus("SUCCESS! Customer " + c.toString().split(" ")[0] + " added with Account " + a.getAccountNumber(), false);
+            // 4. Update UI
+            actionOutputArea.setText("SUCCESS! Customer and Account added.");
+            
         } catch (Exception ex) {
-            setStatus("Error adding customer: " + ex.getMessage(), true);
+            // 5. Handle errors
+            JOptionPane.showMessageDialog(this, "Error adding customer: " + ex.getMessage(), "Input Error", JOptionPane.ERROR_MESSAGE);
         }
     }
     
-    private void displayCustomer(ActionEvent e) {
-        String searchAcctNum = txtSearchAcctNum.getText().trim();
-        try {
-            if (searchAcctNum.isEmpty()) throw new Exception("Enter an Account # to display.");
-            
-            int index = -1;
-            for (int i = 0; i < accounts.size(); i++) {
-                if (accounts.get(i).getAccountNumber().equals(searchAcctNum)) {
-                    index = i;
-                    break;
-                }
-            }
-
-            if (index == -1) throw new Exception("Account not found.");
-
-            Customer c = customers.get(index);
-            Account a = accounts.get(index);
-            
-            String acctType = a instanceof CheckingAccount ? "CHK" : "SAV";
-            
-            // Update Output Labels with current data
-            lblOutCustID.setText("Cust ID: " + c.toString().split(" ")[0]);
-            lblOutAcctNum.setText("Acct #: " + a.getAccountNumber());
-            lblOutAcctType.setText("Type: " + acctType);
-            lblOutBalance.setText(String.format("Balance: $%.2f", a.getBalance()));
-            
-            // Clear transaction specific fields
-            lblOutDate.setText("Date:");
-            lblOutTransType.setText("TT:");
-            lblOutAmount.setText("Amt:");
-            lblOutFees.setText("Fees:");
-            
-            setStatus("Displaying data for Account " + searchAcctNum, false);
-
-        } catch (Exception ex) {
-            setStatus("Error displaying data: " + ex.getMessage(), true);
-        }
-    }
-
-    private void performTransaction(ActionEvent e) {
-        String searchAcctNum = txtSearchAcctNum.getText().trim();
-        double amount = 0.0;
-        String date = txtTransDate.getText().trim();
-        String transType = rdoDeposit.isSelected() ? "DEP" : "WTH";
-        
-        try {
-            if (searchAcctNum.isEmpty()) throw new Exception("Enter an Account # to transact.");
-            amount = validateDouble(txtTransAmount.getText(), "Transaction Amount");
-            
-            // 1. Find the Account
-            int index = -1;
-            for (int i = 0; i < accounts.size(); i++) {
-                if (accounts.get(i).getAccountNumber().equals(searchAcctNum)) {
-                    index = i;
-                    break;
-                }
-            }
-            if (index == -1) throw new Exception("Account not found.");
-            
-            Account a = accounts.get(index);
-            double balanceBefore = a.getBalance();
-            double feeBefore = 0.0;
-            
-            // Determine fees for display (pre-transaction)
-            if (a instanceof CheckingAccount) {
-                feeBefore = 0.50; // Service Fee
-                if (transType.equals("WTH") && (balanceBefore - amount - 0.50) < 0) {
-                    feeBefore += 30.00; // Overdraft Fee
-                }
-            } else if (a instanceof SavingsAccount) {
-                feeBefore = 0.25;
-            }
-
-            // 2. Perform the Transaction
-            if (transType.equals("DEP")) {
-                a.deposit(amount, date);
-            } else { // Withdrawal
-                a.withdrawal(amount, date);
-            }
-            
-            // 3. Update Output Labels
-            Customer c = customers.get(index);
-            String acctType = a instanceof CheckingAccount ? "CHK" : "SAV";
-            double balanceAfter = a.getBalance();
-            double feesCharged = balanceBefore + (transType.equals("WTH") ? -amount : amount) - balanceAfter;
-            
-            lblOutCustID.setText("Cust ID: " + c.toString().split(" ")[0]);
-            lblOutAcctNum.setText("Acct #: " + a.getAccountNumber());
-            lblOutAcctType.setText("Type: " + acctType);
-            lblOutDate.setText("Date: " + date);
-            lblOutTransType.setText("TT: " + transType);
-            lblOutAmount.setText(String.format("Amt: $%.2f", amount));
-            lblOutFees.setText(String.format("Fees: $%.2f", Math.abs(feesCharged)));
-            lblOutBalance.setText(String.format("Balance: $%.2f", a.getBalance()));
-
-            setStatus("SUCCESS! Transaction completed for Account " + searchAcctNum, false);
-
-        } catch (Exception ex) {
-            // Display error and current balance
-            Account a = accounts.get(index);
-            lblOutBalance.setText(String.format("Balance: $%.2f", a.getBalance()));
-            setStatus("Transaction FAILED: " + ex.getMessage(), true);
-        }
+    private void handlePerformTransaction() {
+        // Logic to process deposits or withdrawals
+        // 1. Find the correct Account object from accountList using the Account #
+        // 2. Call account.deposit() or account.withdrawal()
+        // 3. Handle Exceptions thrown by the Account objects (e.g., overdraft denied)
+        // 4. Update balanceLabel and lastTransactionLabel
     }
     
-    private void applyInterest(ActionEvent e) {
-        String searchAcctNum = txtSearchAcctNum.getText().trim();
-        String date = txtTransDate.getText().trim();
-        
-        try {
-            if (searchAcctNum.isEmpty()) throw new Exception("Enter an Account # to apply interest.");
-            
-            // 1. Find the Account
-            int index = -1;
-            for (int i = 0; i < accounts.size(); i++) {
-                if (accounts.get(i).getAccountNumber().equals(searchAcctNum)) {
-                    index = i;
-                    break;
-                }
-            }
-            if (index == -1) throw new Exception("Account not found.");
-            
-            Account a = accounts.get(index);
-            double balanceBefore = a.getBalance();
-
-            if (a instanceof CheckingAccount) {
-                ((CheckingAccount) a).applyInterest(date);
-            } else if (a instanceof SavingsAccount) {
-                ((SavingsAccount) a).applyInterest(date);
-            } else {
-                throw new Exception("Account type not recognized.");
-            }
-            
-            // 3. Update Output Labels
-            Customer c = customers.get(index);
-            String acctType = a instanceof CheckingAccount ? "CHK" : "SAV";
-            double interestAmount = a.getBalance() - balanceBefore;
-            
-            lblOutCustID.setText("Cust ID: " + c.toString().split(" ")[0]);
-            lblOutAcctNum.setText("Acct #: " + a.getAccountNumber());
-            lblOutAcctType.setText("Type: " + acctType);
-            lblOutDate.setText("Date: " + date);
-            lblOutTransType.setText("TT: INT");
-            lblOutAmount.setText("Amt: $0.00");
-            lblOutFees.setText(String.format("Interest: $%.2f", interestAmount));
-            lblOutBalance.setText(String.format("Balance: $%.2f", a.getBalance()));
-
-            setStatus("SUCCESS! Interest applied to Account " + searchAcctNum, false);
-
-        } catch (Exception ex) {
-            setStatus("Interest application FAILED: " + ex.getMessage(), true);
-        }
+    private void handleApplyInterest() {
+        // Logic to apply interest to a selected account
+        // 1. Find the Account object
+        // 2. Call checkingAccount.applyInterest() or savingsAccount.applyInterest()
+        // 3. Update balanceLabel
     }
     
-    // --- Reusable Validation Helpers (Adapted from DataEntry.java) ---
-
-    private String validateLimitedString(String s, String name, int maxLen) throws Exception {
-        s = s.trim();
-        if (s.isEmpty()) throw new Exception(name + " cannot be blank.");
-        if (s.length() > maxLen) throw new Exception(name + " max length is " + maxLen + ".");
-        return s;
+    private void clearAllFields() {
+        // Logic to clear all text fields
     }
 
-    private String validateNumericString(String s, String name, int length) throws Exception {
-        s = s.trim();
-        if (s.isEmpty()) throw new Exception(name + " cannot be blank.");
-        if (!s.matches("\\d+")) throw new Exception(name + " must be numeric.");
-        if (s.length() != length) throw new Exception(name + " must be exactly " + length + " digits.");
-        return s;
-    }
-    
-    private double validateDouble(String s, String name) throws Exception {
-        s = s.trim();
-        try {
-            return Double.parseDouble(s);
-        } catch (NumberFormatException e) {
-            throw new Exception("Enter a valid decimal number for " + name + ".");
-        }
-    }
+
+    // The main method is now in BankAcctApp.java, keeping this file clean!
 }
