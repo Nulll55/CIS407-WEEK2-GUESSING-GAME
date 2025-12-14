@@ -155,17 +155,35 @@ public class SavingsAccount extends Account {
     }
 }
 ------Customer.java-----
-// ----- Customer.java (FIXED)-----
+// ----- Customer.java (Final & Complete) -----
 package courseProject;
 
 public class Customer {
     private String customerID;
     private String ssn;
+    private String lastName;
+    private String firstName;
+    private String street;
+    private String city;
+    private String state;
+    private String zip;
+    private String phone;
 
+    public void setCustomerID(String customerID) { this.customerID = customerID; }
+    public void setSsn(String ssn) { this.ssn = ssn; }
+    public void setLastName(String lastName) { this.lastName = lastName; }
+    public void setFirstName(String firstName) { this.firstName = firstName; }
+    public void setStreet(String street) { this.street = street; }
+    public void setCity(String city) { this.city = city; }
+    public void setState(String state) { this.state = state; }
+    public void setZip(String zip) { this.zip = zip; }
+    public void setPhone(String phone) { this.phone = phone; }
+    
     public String getCustomerID() { return customerID; }
     
     @Override
     public String toString() {
+        // Used by handleDisplayData() to format the data
         return String.format("%-8s %-10s %-15s %-15s %-20s %-15s %-5s %-5s %-10s",
             customerID, ssn, lastName, firstName, street, city, state, zip, phone);
     }
