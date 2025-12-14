@@ -422,4 +422,211 @@ public class BankGUI extends JFrame implements ActionListener {
     public void actionPerformed(ActionEvent e) {
         actionOutputArea.setText("Processing request...");
         try {
-            if (e.getSource() == addCustomer
+            if (e.getSource() == addCustomerButton) {
+                handleAddCustomer();
+            } else if (e.getSource() == performTransactionButton) {
+                handlePerformTransaction();
+            } else if (e.getSource() == applyInterestButton) {
+                handleApplyInterest();
+            } else if (e.getSource() == clearFieldsButton) {
+                clearAllFields();
+            } else if (e.getSource() == displayButton) {
+                handleDisplayData();
+            }
+        } catch (NumberFormatException ex) {
+            actionOutputArea.setText("ERROR: Invalid number format in a field (e.g., amount or balance).");
+        } catch (DateTimeParseException ex) {
+             actionOutputArea.setText("ERROR: Invalid date format. Use YYYY-MM-DD.");
+        } catch (Exception ex) {
+            actionOutputArea.setText("ERROR: " + ex.getMessage());
+        }
+    }
+    
+    private void handleAddCustomer() throws Exception {
+        if (customerIdField.getText().length() != 5 || accountNumberField.getText().length() != 5) {
+             throw new IllegalArgumentException("Customer ID and Account Number must be 5 characters long.");
+        }
+        
+        Customer newCustomer = new Customer();
+        newCustomer.setCustomerID(customerIdField.getText());
+        newCustomer.setSsn(ssnField.getText());
+        newCustomer.setLastName(lastNameField.getText());
+        newCustomer.setFirstName(firstNameField.getText());
+        newCustomer.setStreet(streetField.getText());
+        newCustomer.setCity(cityField.getText());
+        newCustomer.setState((String)stateComboBox.getSelectedItem());
+        newCustomer.setZip(zipField.getText());
+        newCustomer.setPhone(phoneField.getText());
+        customerList.add(newCustomer);
+        
+        double balance = 0.0;
+        try {
+            balance = Double.parseDouble(startingBalanceField.getText());
+        } catch (NumberFormatException e) {
+            customerList.remove(newCustomer); 
+            throw new Exception("Starting Balance must be a valid number.");
+        }
+        
+        Account newAccount;
+        if (checkingRadio.isSelected()) {
+            newAccount = new CheckingAccount(balance);
+        } else if (savingsRadio.isSelected()) {
+            newAccount = new SavingsAccount(balance);
+        } else {
+            customerList.remove(newCustomer); 
+            throw new Exception("Account type must be selected.");
+        }
+        
+        newAccount.setAccountNumber(accountNumberField.getText());
+        accountList.add(newAccount);
+        
+        actionOutputArea.setText("SUCCESS! Customer " + newCustomer.getCustomerID() + " added with Account " + newAccount.getAccountNumber() + ". Balance: $" + currencyFormatter.format(newAccount.balance()));
+    }
+
+    private void handlePerformTransaction() throws Exception {
+        String acctNum = transactAccountField.getText();
+        double amount = Double.parseDouble(transactAmountField.getText());
+        String date = transactDateField.getText();
+        
+        if (acctNum.isEmpty() || amount <= 0 || date.isEmpty()) {
+             throw new Exception("Account #, positive Amount, and Date are required.");
+        }
+        
+        Account targetAccount = findAccount(acctNum);
+        if (targetAccount == null) {
+            throw new Exception("Account not found for transaction: " + acctNum);
+        }
+        
+        double startingBalance = targetAccount.balance();
+        
+        try {
+            if (depositRadio.isSelected()) {
+                targetAccount.deposit(amount, date);
+                actionOutputArea.setText("SUCCESS! Deposit of $" + currencyFormatter.format(amount) + " processed for account " + acctNum);
+                updateLastTransactionInfo(targetAccount, amount, "Deposit", date, targetAccount.balance() - startingBalance - amount);
+            } else if (withdrawalRadio.isSelected()) {
+                targetAccount.withdrawal(amount, date);
+                actionOutputArea.setText("SUCCESS! Withdrawal of $" + currencyFormatter.format(amount) + " processed for account " + acctNum);
+                updateLastTransactionInfo(targetAccount, amount, "Withdrawal", date, startingBalance - targetAccount.balance() - amount);
+            } else {
+                 throw new Exception("Transaction type (Deposit/Withdrawal) must be selected.");
+            }
+            
+            balanceLabel.setText("Balance: $" + currencyFormatter.format(targetAccount.balance()));
+
+        } catch (Exception e) {
+             actionOutputArea.setText("TRANSACTION FAILED: " + e.getMessage());
+        }
+    }
+    
+    private void handleApplyInterest() throws Exception {
+        String acctNum = transactAccountField.getText();
+        String date = transactDateField.getText();
+        
+        if (acctNum.isEmpty() || date.isEmpty()) {
+            throw new Exception("Account # and Date are required to apply interest.");
+        }
+        
+        Account targetAccount = findAccount(acctNum);
+        if (targetAccount == null) {
+            throw new Exception("Account not found for interest application: " + acctNum);
+        }
+        
+        double startingBalance = targetAccount.balance();
+        
+        if (targetAccount instanceof CheckingAccount) {
+            ((CheckingAccount) targetAccount).applyInterest(date);
+        } else if (targetAccount instanceof SavingsAccount) {
+            ((SavingsAccount) targetAccount).applyInterest(date);
+        } else {
+             throw new Exception("Account type is unknown, cannot apply interest.");
+        }
+        
+        double interestAmount = targetAccount.balance() - startingBalance;
+        
+        actionOutputArea.setText("SUCCESS! Interest of $" + currencyFormatter.format(interestAmount) + " applied to account " + acctNum);
+        balanceLabel.setText("Balance: $" + currencyFormatter.format(targetAccount.balance()));
+        updateLastTransactionInfo(targetAccount, interestAmount, "Interest", date, 0.0);
+    }
+    
+    private void handleDisplayData() {
+        if (customerList.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "No customers or accounts have been added yet.", "Data Display", JOptionPane.INFORMATION_MESSAGE);
+            actionOutputArea.setText("No data to display.");
+            return;
+        }
+        
+        StringBuilder sb = new StringBuilder("--- CUSTOMER DATA ---\n");
+        for (Customer c : customerList) {
+            sb.append(c.toString()).append("\n");
+        }
+        sb.append("\n--- ACCOUNT DATA ---\n");
+        for (Account a : accountList) {
+            sb.append(a.toString()).append("\n");
+        }
+        
+        actionOutputArea.setText("Displaying all customer and account data in popup.");
+        JTextArea textArea = new JTextArea(sb.toString());
+        textArea.setEditable(false);
+        JScrollPane scrollPane = new JScrollPane(textArea);  
+        scrollPane.setPreferredSize(new Dimension(800, 400));
+        
+        JOptionPane.showMessageDialog(this, scrollPane, "Customer and Account Data", JOptionPane.INFORMATION_MESSAGE);
+    }
+    
+    private void clearAllFields() {
+        customerIdField.setText("");
+        ssnField.setText("");
+        lastNameField.setText("");
+        firstNameField.setText("");
+        streetField.setText("");
+        cityField.setText("");
+        zipField.setText("");
+        phoneField.setText("");
+        accountNumberField.setText("");
+        startingBalanceField.setText("");
+        transactAccountField.setText("");
+        transactAmountField.setText("");
+        transactDateField.setText("YYYY-MM-DD");
+        
+        lastTransactionCustIdField.setText("");
+        lastTransactionAcctField.setText("");
+        lastTransactionAmtField.setText("");
+        lastTransactionTypeField.setText("");
+        lastTransactionFeesField.setText("");
+        lastTransactionDateField.setText("");
+        
+        balanceLabel.setText("Balance: $" + currencyFormatter.format(0.00));
+        actionOutputArea.setText("Application Ready, Enter new customer data.");
+    }
+    
+    private Account findAccount(String acctNum) {
+        for (Account a : accountList) {
+            if (a.getAccountNumber().equals(acctNum)) {
+                return a;
+            }
+        }
+        return null;
+    }
+    
+    private Customer findCustomer(String custId) {
+        for (Customer c : customerList) {
+            if (c.getCustomerID().equals(custId)) {
+                return c;
+            }
+        }
+        return null;
+    }
+    
+    private void updateLastTransactionInfo(Account account, double amount, String type, String date, double feeChange) {
+        // Assuming Account Number links to Customer ID for simplicity
+        Customer c = findCustomer(account.getAccountNumber()); 
+        
+        lastTransactionCustIdField.setText(c != null ? c.getCustomerID() : "N/A");
+        lastTransactionAcctField.setText(account.getAccountNumber());
+        lastTransactionAmtField.setText(currencyFormatter.format(amount));
+        lastTransactionTypeField.setText(type);
+        lastTransactionFeesField.setText(currencyFormatter.format(Math.abs(feeChange)));
+        lastTransactionDateField.setText(date);
+    }
+}
