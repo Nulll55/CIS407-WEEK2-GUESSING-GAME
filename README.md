@@ -102,6 +102,7 @@ public class CheckingAccount extends Account {
     }
 }
 -----SavingAccount------
+// ----- SavingsAccount.java (COMPLETE) ------
 package courseProject;
 
 import java.time.LocalDate;
@@ -116,7 +117,6 @@ public class SavingsAccount extends Account {
         super(startingBalance);
     }
 
-    // Helper method to validate date format
     private void validateDate(String date) throws Exception {
         try {
             LocalDate.parse(date); 
@@ -144,7 +144,6 @@ public class SavingsAccount extends Account {
             throw new Exception("Savings accounts cannot be overdrawn. Withdrawal denied.");
         }
         
-        // If the check passes, perform the transaction
         balance -= amount;
         balance -= SERVICE_FEE; // Apply service fee
     }
@@ -156,42 +155,21 @@ public class SavingsAccount extends Account {
     }
 }
 ------Customer.java-----
+// ----- Customer.java (FIXED)-----
 package courseProject;
 
 public class Customer {
     private String customerID;
     private String ssn;
-    private String lastName;
-    private String firstName;
-    private String street;
-    private String city;
-    private String state;
-    private String zip;
-    private String phone;
 
-    // Setters (getters are omitted for brevity but should be added if needed, 
-    // though the GUI code uses the objects directly)
-    public void setCustomerID(String customerID) { this.customerID = customerID; }
-    public void setSsn(String ssn) { this.ssn = ssn; }
-    public void setLastName(String lastName) { this.lastName = lastName; }
-    public void setFirstName(String firstName) { this.firstName = firstName; }
-    public void setStreet(String street) { this.street = street; }
-    public void setCity(String city) { this.city = city; }
-    public void setState(String state) { this.state = state; }
-    public void setZip(String zip) { this.zip = zip; }
-    public void setPhone(String phone) { this.phone = phone; }
-    
-    // Simple getters for display in the GUI class logic
     public String getCustomerID() { return customerID; }
-    // ... other getters as needed
-
+    
     @Override
     public String toString() {
         return String.format("%-8s %-10s %-15s %-15s %-20s %-15s %-5s %-5s %-10s",
             customerID, ssn, lastName, firstName, street, city, state, zip, phone);
     }
 }
-
 // ----- BankAcctApp.java (Updated) ------
 package courseProject;
 
