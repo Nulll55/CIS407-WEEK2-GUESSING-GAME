@@ -211,152 +211,428 @@ public class BankAcctApp {
 // ----- BankGUI.java (New Class) ------
 package courseProject;
 
-import javax.swing.JFrame;
-import javax.swing.JPanel;
-import javax.swing.JLabel;
-import javax.swing.JButton;
-import javax.swing.JTextField;
-import javax.swing.JTextArea;
-import javax.swing.JRadioButton;
-import javax.swing.ButtonGroup;
-import javax.swing.JComboBox;
-import javax.swing.JOptionPane; // Useful for pop-up messages
-import java.awt.BorderLayout;
-import java.awt.GridLayout;
-import java.awt.FlowLayout;
+import javax.swing.*;
+import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
 import java.util.ArrayList;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
+import java.text.DecimalFormat; // Useful for formatting currency
 
 public class BankGUI extends JFrame implements ActionListener { 
 
-    // --- DATA STORAGE ---
     private ArrayList<Customer> customerList = new ArrayList<>();
     private ArrayList<Account> accountList = new ArrayList<>();
+    private DecimalFormat currencyFormatter = new DecimalFormat("0.00");
 
-    // --- GUI COMPONENTS (Define the main components here) ---
-    // Customer Fields
-    private JTextField customerIdField;
-    private JTextField ssnField;
-    private JTextField lastNameField;
-    // ... add all other JTextFields for address, phone, etc. ...
+    private JTextField customerIdField = new JTextField(5);
+    private JTextField ssnField = new JTextField(9);
+    private JTextField lastNameField = new JTextField(20);
+    private JTextField firstNameField = new JTextField(15);
+    private JTextField streetField = new JTextField(20);
+    private JTextField cityField = new JTextField(20);
+    private JComboBox<String> stateComboBox;
+    private JTextField zipField = new JTextField(5);
+    private JTextField phoneField = new JTextField(10);
 
-    // Account Fields
-    private JRadioButton checkingRadio;
-    private JRadioButton savingsRadio;
-    private ButtonGroup accountTypeGroup;
-    private JTextField accountNumberField;
-    private JTextField startingBalanceField;
-
-    // Transaction Fields
-    private JTextField transactAccountField;
-    private JTextField transactAmountField;
-    private JTextField transactDateField;
-    private JRadioButton depositRadio;
-    private JRadioButton withdrawalRadio;
-    private ButtonGroup transactionTypeGroup;
-
-    // Buttons
+    private JRadioButton checkingRadio = new JRadioButton("Checking (CHK)");
+    private JRadioButton savingsRadio = new JRadioButton("Savings (SAV)");
+    private ButtonGroup accountTypeGroup = new ButtonGroup();
+    private JTextField accountNumberField = new JTextField(5);
+    private JTextField startingBalanceField = new JTextField(10);
+    
+    private JTextField transactAccountField = new JTextField(5);
+    private JTextField transactAmountField = new JTextField(10);
+    private JTextField transactDateField = new JTextField("YYYY-MM-DD", 10);
+    private JRadioButton depositRadio = new JRadioButton("Deposit");
+    private JRadioButton withdrawalRadio = new JRadioButton("Withdrawal");
+    private ButtonGroup transactionTypeGroup = new ButtonGroup();
+    
     private JButton addCustomerButton;
     private JButton displayButton;
     private JButton clearFieldsButton;
     private JButton performTransactionButton;
     private JButton applyInterestButton;
     
-    // Output Areas
-    private JTextArea actionOutputArea; // For "SUCCESS! Customer added" messages
-    private JLabel lastTransactionLabel; // For displaying last transaction info
-    private JLabel balanceLabel; // For displaying the current balance
+    private JTextArea actionOutputArea; 
+    private JLabel lastTransactionLabel; 
+    private JLabel balanceLabel; 
+    private JTextField lastTransactionCustIdField = new JTextField(5);
+    private JTextField lastTransactionAcctField = new JTextField(5);
+    private JTextField lastTransactionAmtField = new JTextField(10);
+    private JTextField lastTransactionTypeField = new JTextField(5);
+    private JTextField lastTransactionFeesField = new JTextField(5);
+    private JTextField lastTransactionDateField = new JTextField(10);
 
-    // --- CONSTRUCTOR: Build the GUI ---
     public BankGUI() {
-        // 1. JFrame Setup
         super("Banking Application - Customer and Transaction Manager");
-        this.setSize(900, 650);
+        
+        this.setSize(950, 700);
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); 
-        this.setLayout(new BorderLayout(10, 10)); // Use a main layout
-
-        // 2. Initialize Components (example)
-        customerIdField = new JTextField(5);
+        this.setLayout(new BorderLayout(10, 10)); 
+        
         addCustomerButton = new JButton("Add New Customer and Account");
+        displayButton = new JButton("Display Customer/Account Data");
+        clearFieldsButton = new JButton("Clear All Fields");
+        performTransactionButton = new JButton("Perform Transaction");
+        applyInterestButton = new JButton("Apply Interest Earned");
         
-        // 3. Assemble Panels (You will define panels for each section later)
-        JPanel mainPanel = new JPanel(new GridLayout(1, 2, 10, 10));
-        
-        // Example: Setup the Actions/Transactions area (Top right)
-        actionOutputArea = new JTextArea(3, 20);
+        actionOutputArea = new JTextArea(1, 40); // Use 1 row to mimic the bar
+        actionOutputArea.setText("Application Ready, Enter new customer data.");
         actionOutputArea.setEditable(false);
-        // ... (You will need many more panels for the layout shown in your screenshots) ...
+        actionOutputArea.setBackground(new Color(200, 220, 255)); // Light Blue background
+        
+        String[] states = {"AL", "AK", "AZ", "CA", "NY", "TX", "VA", "WA"};
+        stateComboBox = new JComboBox<>(states);
 
-        // 4. Register Listeners
+        accountTypeGroup.add(checkingRadio);
+        accountTypeGroup.add(savingsRadio);
+        checkingRadio.setSelected(true);
+
+        transactionTypeGroup.add(depositRadio);
+        transactionTypeGroup.add(withdrawalRadio);
+        depositRadio.setSelected(true);
+        
+        lastTransactionLabel = new JLabel("Last Transaction / Account Info");
+        balanceLabel = new JLabel("Balance: $" + currencyFormatter.format(0.00));
+        
+        lastTransactionCustIdField.setEditable(false);
+        lastTransactionAcctField.setEditable(false);
+        lastTransactionAmtField.setEditable(false);
+        lastTransactionTypeField.setEditable(false);
+        lastTransactionFeesField.setEditable(false);
+        lastTransactionDateField.setEditable(false);
+    
+        JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        topPanel.add(actionOutputArea);
+        this.add(topPanel, BorderLayout.NORTH);
+
+        JPanel mainContent = new JPanel(new GridLayout(1, 2, 15, 15));
+        
+        JPanel leftPanel = new JPanel(new BorderLayout(5, 5));
+        JPanel customerGrid = createCustomerAccountGrid(); 
+        customerGrid.setBorder(BorderFactory.createTitledBorder("New Customer & Account Data"));
+        leftPanel.add(customerGrid, BorderLayout.NORTH);
+        
+        JPanel lastTransactionPanel = createLastTransactionPanel();
+        lastTransactionPanel.setBorder(BorderFactory.createTitledBorder("Last Transaction / Account Info"));
+        leftPanel.add(lastTransactionPanel, BorderLayout.CENTER); // Changed to CENTER to fill space
+        mainContent.add(leftPanel);
+        
+        JPanel rightPanel = new JPanel(new BorderLayout(5, 5));
+        JPanel actionOutputPanel = createActionOutputPanel();
+        actionOutputPanel.setBorder(BorderFactory.createTitledBorder("Actions & Transactions"));
+        rightPanel.add(actionOutputPanel, BorderLayout.NORTH);
+        
+        JPanel transactPanel = createTransactionPanel();
+        transactPanel.setBorder(BorderFactory.createTitledBorder("Perform Transaction"));
+        rightPanel.add(transactPanel, BorderLayout.CENTER);
+        mainContent.add(rightPanel);
+        
+        this.add(mainContent, BorderLayout.CENTER);
+        
         addCustomerButton.addActionListener(this);
+        displayButton.addActionListener(this);
+        clearFieldsButton.addActionListener(this);
         performTransactionButton.addActionListener(this);
-        // ... register all other buttons ...
+        applyInterestButton.addActionListener(this);
         
-        // 5. Add Panels to Frame
-        // Example: this.add(mainPanel, BorderLayout.CENTER);
-        
-        // 6. Finalize
-        this.pack(); // Adjusts size to fit components (or use setSize if preferred)
-        this.setLocationRelativeTo(null); // Centers the window
+        this.setLocationRelativeTo(null); 
         this.setVisible(true); 
     }
-
-    // --- ACTIONLISTENER IMPLEMENTATION (Handles button clicks) ---
-    @Override
-    public void actionPerformed(ActionEvent e) {
-        // Determine which button was clicked
-        if (e.getSource() == addCustomerButton) {
-            handleAddCustomer();
-        } else if (e.getSource() == performTransactionButton) {
-            handlePerformTransaction();
-        } 
-        // ... add logic for other buttons ...
+    
+    private JPanel createCustomerAccountGrid() {
+        JPanel panel = new JPanel(new GridLayout(13, 2, 5, 5)); 
+        panel.add(new JLabel("Customer ID (max 5):")); panel.add(customerIdField);
+        panel.add(new JLabel("SSN (9 digits):")); panel.add(ssnField);
+        panel.add(new JLabel("Last Name (max 20):")); panel.add(lastNameField);
+        panel.add(new JLabel("First Name (max 15):")); panel.add(firstNameField);
+        panel.add(new JLabel("Street (max 20):")); panel.add(streetField);
+        panel.add(new JLabel("City (max 20):")); panel.add(cityField);
+        panel.add(new JLabel("State (2 letters):")); panel.add(stateComboBox);
+        panel.add(new JLabel("Zip Code (5 digits):")); panel.add(zipField);
+        panel.add(new JLabel("Phone (10 digits):")); panel.add(phoneField);
+        
+        JPanel radioPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        radioPanel.add(checkingRadio); radioPanel.add(savingsRadio);
+        panel.add(new JLabel("Account Type:")); panel.add(radioPanel);
+        
+        panel.add(new JLabel("Account Number (max 5):")); panel.add(accountNumberField);
+        panel.add(new JLabel("Starting Balance:")); panel.add(startingBalanceField);
+        return panel;
     }
     
-    // --- HANDLER METHODS (Core logic hooks) ---
-    private void handleAddCustomer() {
-        // 1. Get user input from all fields (Customer ID, SSN, Balances, etc.)
-        String custId = customerIdField.getText();
+    private JPanel createActionOutputPanel() {
+        JPanel panel = new JPanel(new BorderLayout(5, 5));
         
+        JPanel buttonPanel = new JPanel(new GridLayout(3, 1, 5, 5));
+        buttonPanel.add(addCustomerButton);
+        buttonPanel.add(displayButton);
+        buttonPanel.add(clearFieldsButton);
+        
+        panel.add(buttonPanel, BorderLayout.NORTH);
+        return panel;
+    }
+    
+    private JPanel createTransactionPanel() {
+        JPanel panel = new JPanel(new GridLayout(5, 2, 5, 5));
+        
+        panel.add(new JLabel("Account # to Transact:")); panel.add(transactAccountField);
+        panel.add(new JLabel("Transaction Amount:")); panel.add(transactAmountField);
+        panel.add(new JLabel("Transaction Date:")); panel.add(transactDateField);
+        
+        JPanel typeRadioPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        typeRadioPanel.add(depositRadio); typeRadioPanel.add(withdrawalRadio);
+        panel.add(new JLabel("Transaction Type:")); panel.add(typeRadioPanel);
+        
+        JPanel transactButtonPanel = new JPanel(new GridLayout(1, 2, 10, 10));
+        transactButtonPanel.add(performTransactionButton);
+        transactButtonPanel.add(applyInterestButton);
+        panel.add(new JLabel("")); 
+        panel.add(transactButtonPanel);
+
+        return panel;
+    }
+    
+    private JPanel createLastTransactionPanel() {
+        JPanel panel = new JPanel(new BorderLayout(5, 5));
+        panel.add(lastTransactionLabel, BorderLayout.NORTH);
+        
+        JPanel infoGrid = new JPanel(new GridLayout(2, 6, 5, 5));
+        
+        infoGrid.add(new JLabel("Cust ID:")); infoGrid.add(new JLabel("Acct #:"));
+        infoGrid.add(new JLabel("Amt:")); infoGrid.add(new JLabel("Type:"));
+        infoGrid.add(new JLabel("Fees:")); infoGrid.add(new JLabel("Date:"));
+        
+        infoGrid.add(lastTransactionCustIdField); infoGrid.add(lastTransactionAcctField);
+        infoGrid.add(lastTransactionAmtField); infoGrid.add(lastTransactionTypeField);
+        infoGrid.add(lastTransactionFeesField); infoGrid.add(lastTransactionDateField);
+        
+        panel.add(infoGrid, BorderLayout.CENTER);
+        panel.add(balanceLabel, BorderLayout.SOUTH);
+        
+        return panel;
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        actionOutputArea.setText("Processing request...");
         try {
-            // 2. Instantiate new Customer and Account objects (using CheckingAccount or SavingsAccount)
-            // Example: Account newAccount = new CheckingAccount(startingBalance);
-            // Example: Customer newCustomer = new Customer();
-            
-            // 3. Add to lists
-            // customerList.add(newCustomer);
-            // accountList.add(newAccount);
-            
-            // 4. Update UI
-            actionOutputArea.setText("SUCCESS! Customer and Account added.");
-            
+            if (e.getSource() == addCustomerButton) {
+                handleAddCustomer();
+            } else if (e.getSource() == performTransactionButton) {
+                handlePerformTransaction();
+            } else if (e.getSource() == applyInterestButton) {
+                handleApplyInterest();
+            } else if (e.getSource() == clearFieldsButton) {
+                clearAllFields();
+            } else if (e.getSource() == displayButton) {
+                handleDisplayData();
+            }
+        } catch (NumberFormatException ex) {
+            actionOutputArea.setText("ERROR: Invalid number format in a field (e.g., amount or balance).");
+        } catch (DateTimeParseException ex) {
+             actionOutputArea.setText("ERROR: Invalid date format. Use YYYY-MM-DD.");
         } catch (Exception ex) {
-            // 5. Handle errors
-            JOptionPane.showMessageDialog(this, "Error adding customer: " + ex.getMessage(), "Input Error", JOptionPane.ERROR_MESSAGE);
+            actionOutputArea.setText("ERROR: " + ex.getMessage());
         }
     }
     
-    private void handlePerformTransaction() {
-        // Logic to process deposits or withdrawals
-        // 1. Find the correct Account object from accountList using the Account #
-        // 2. Call account.deposit() or account.withdrawal()
-        // 3. Handle Exceptions thrown by the Account objects (e.g., overdraft denied)
-        // 4. Update balanceLabel and lastTransactionLabel
+    private void handleAddCustomer() throws Exception {
+        // Input validation and object creation
+        if (customerIdField.getText().length() != 5 || accountNumberField.getText().length() != 5) {
+             throw new IllegalArgumentException("Customer ID and Account Number must be 5 characters long.");
+        }
+        
+        // 1. Create Customer
+        Customer newCustomer = new Customer();
+        newCustomer.setCustomerID(customerIdField.getText());
+        newCustomer.setSsn(ssnField.getText());
+        newCustomer.setLastName(lastNameField.getText());
+        newCustomer.setFirstName(firstNameField.getText());
+        newCustomer.setStreet(streetField.getText());
+        newCustomer.setCity(cityField.getText());
+        newCustomer.setState((String)stateComboBox.getSelectedItem());
+        newCustomer.setZip(zipField.getText());
+        newCustomer.setPhone(phoneField.getText());
+        customerList.add(newCustomer);
+        
+        double balance = 0.0;
+        try {
+            balance = Double.parseDouble(startingBalanceField.getText());
+        } catch (NumberFormatException e) {
+            // Rollback: remove customer if account fails
+            customerList.remove(newCustomer); 
+            throw new Exception("Starting Balance must be a valid number.");
+        }
+        
+        Account newAccount;
+        if (checkingRadio.isSelected()) {
+            newAccount = new CheckingAccount(balance);
+        } else if (savingsRadio.isSelected()) {
+            newAccount = new SavingsAccount(balance);
+        } else {
+             // Rollback
+            customerList.remove(newCustomer); 
+            throw new Exception("Account type must be selected.");
+        }
+        
+        newAccount.setAccountNumber(accountNumberField.getText());
+        accountList.add(newAccount);
+        
+        // Update UI
+        actionOutputArea.setText("SUCCESS! Customer " + newCustomer.getCustomerID() + " added with Account " + newAccount.getAccountNumber() + ". Balance: $" + currencyFormatter.format(newAccount.balance()));
+    }
+
+    private void handlePerformTransaction() throws Exception {
+        String acctNum = transactAccountField.getText();
+        double amount = Double.parseDouble(transactAmountField.getText());
+        String date = transactDateField.getText();
+        
+        if (acctNum.isEmpty() || amount <= 0 || date.isEmpty()) {
+             throw new Exception("Account #, positive Amount, and Date are required.");
+        }
+        
+        Account targetAccount = findAccount(acctNum);
+        if (targetAccount == null) {
+            throw new Exception("Account not found for transaction: " + acctNum);
+        }
+        
+        double startingBalance = targetAccount.balance();
+        
+        try {
+            if (depositRadio.isSelected()) {
+                targetAccount.deposit(amount, date);
+                actionOutputArea.setText("SUCCESS! Deposit of $" + currencyFormatter.format(amount) + " processed for account " + acctNum);
+                updateLastTransactionInfo(targetAccount, amount, "Deposit", date, targetAccount.balance() - startingBalance - amount);
+            } else if (withdrawalRadio.isSelected()) {
+                targetAccount.withdrawal(amount, date);
+                actionOutputArea.setText("SUCCESS! Withdrawal of $" + currencyFormatter.format(amount) + " processed for account " + acctNum);
+                updateLastTransactionInfo(targetAccount, amount, "Withdrawal", date, startingBalance - targetAccount.balance() - amount);
+            } else {
+                 throw new Exception("Transaction type (Deposit/Withdrawal) must be selected.");
+            }
+            
+            balanceLabel.setText("Balance: $" + currencyFormatter.format(targetAccount.balance()));
+
+        } catch (Exception e) {
+             // Exception thrown by Account class (e.g., Overdraft denial)
+             actionOutputArea.setText("TRANSACTION FAILED: " + e.getMessage());
+        }
     }
     
-    private void handleApplyInterest() {
-        // Logic to apply interest to a selected account
-        // 1. Find the Account object
-        // 2. Call checkingAccount.applyInterest() or savingsAccount.applyInterest()
-        // 3. Update balanceLabel
+    private void handleApplyInterest() throws Exception {
+        String acctNum = transactAccountField.getText();
+        String date = transactDateField.getText();
+        
+        if (acctNum.isEmpty() || date.isEmpty()) {
+            throw new Exception("Account # and Date are required to apply interest.");
+        }
+        
+        Account targetAccount = findAccount(acctNum);
+        if (targetAccount == null) {
+            throw new Exception("Account not found for interest application: " + acctNum);
+        }
+        
+        double startingBalance = targetAccount.balance();
+        
+        if (targetAccount instanceof CheckingAccount) {
+            ((CheckingAccount) targetAccount).applyInterest(date);
+        } else if (targetAccount instanceof SavingsAccount) {
+            ((SavingsAccount) targetAccount).applyInterest(date);
+        } else {
+             throw new Exception("Account type is unknown, cannot apply interest.");
+        }
+        
+        double interestAmount = targetAccount.balance() - startingBalance;
+        
+        actionOutputArea.setText("SUCCESS! Interest of $" + currencyFormatter.format(interestAmount) + " applied to account " + acctNum);
+        balanceLabel.setText("Balance: $" + currencyFormatter.format(targetAccount.balance()));
+        updateLastTransactionInfo(targetAccount, interestAmount, "Interest", date, 0.0); // Interest has no fee
+    }
+    
+    private void handleDisplayData() {
+        if (customerList.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "No customers or accounts have been added yet.", "Data Display", JOptionPane.INFORMATION_MESSAGE);
+            actionOutputArea.setText("No data to display.");
+            return;
+        }
+        
+        StringBuilder sb = new StringBuilder("--- CUSTOMER DATA ---\n");
+        for (Customer c : customerList) {
+            sb.append(c.toString()).append("\n");
+        }
+        sb.append("\n--- ACCOUNT DATA ---\n");
+        for (Account a : accountList) {
+            sb.append(a.toString()).append("\n");
+        }
+        
+        actionOutputArea.setText("Displaying all customer and account data in popup.");
+        JTextArea textArea = new JTextArea(sb.toString());
+        textArea.setEditable(false);
+        JScrollPane scrollPane = new JScrollPane(textArea);  
+        scrollPane.setPreferredSize(new Dimension(800, 400));
+        
+        JOptionPane.showMessageDialog(this, scrollPane, "Customer and Account Data", JOptionPane.INFORMATION_MESSAGE);
     }
     
     private void clearAllFields() {
-        // Logic to clear all text fields
+        // Clear all input text fields
+        customerIdField.setText("");
+        ssnField.setText("");
+        lastNameField.setText("");
+        firstNameField.setText("");
+        streetField.setText("");
+        cityField.setText("");
+        zipField.setText("");
+        phoneField.setText("");
+        accountNumberField.setText("");
+        startingBalanceField.setText("");
+        transactAccountField.setText("");
+        transactAmountField.setText("");
+        transactDateField.setText("YYYY-MM-DD");
+        
+        // Clear transaction info
+        lastTransactionCustIdField.setText("");
+        lastTransactionAcctField.setText("");
+        lastTransactionAmtField.setText("");
+        lastTransactionTypeField.setText("");
+        lastTransactionFeesField.setText("");
+        lastTransactionDateField.setText("");
+        
+        // Reset labels
+        balanceLabel.setText("Balance: $" + currencyFormatter.format(0.00));
+        actionOutputArea.setText("Application Ready, Enter new customer data.");
     }
-
-
-    // The main method is now in BankAcctApp.java, keeping this file clean!
+    
+    private Account findAccount(String acctNum) {
+        for (Account a : accountList) {
+            if (a.getAccountNumber().equals(acctNum)) {
+                return a;
+            }
+        }
+        return null;
+    }
+    
+    private Customer findCustomer(String custId) {
+        for (Customer c : customerList) {
+            if (c.getCustomerID().equals(custId)) {
+                return c;
+            }
+        }
+        return null;
+    }
+    
+    private void updateLastTransactionInfo(Account account, double amount, String type, String date, double feeChange) {
+        Customer c = findCustomer(account.getAccountNumber()); // Assuming Account Number links to Customer ID for simplicity, adjust if necessary
+        
+        lastTransactionCustIdField.setText(c != null ? c.getCustomerID() : "N/A");
+        lastTransactionAcctField.setText(account.getAccountNumber());
+        lastTransactionAmtField.setText(currencyFormatter.format(amount));
+        lastTransactionTypeField.setText(type);
+        lastTransactionFeesField.setText(currencyFormatter.format(Math.abs(feeChange)));
+        lastTransactionDateField.setText(date);
+    }
 }
